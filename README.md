@@ -132,28 +132,34 @@ Se puede ampliar a usuarios individuales con permisos:
 
 ## 5. Base de Datos (PostgreSQL)
 
-Esquema de tablas principales:
+Motor: **PostgreSQL en la nube (Neon)** — base `sistema_gas`, sin Docker. Migraciones y datos iniciales con Prisma.
 
 ```
 marcas            →  id, nombre, precio_defecto, activo
 repartidores      →  id, nombre, telefono, activo
 clientes          →  id, nombre, direccion, telefono, notas
+usuarios          →  id, nombre, rol (ADMIN/OPERADOR/REPARTIDOR), pin_hash, activo
 ventas            →  id, fecha, cliente_id, direccion, telefono, premium,
                      marca_id, cantidad, valor_unitario, total,
-                     a_cuenta, saldo, prestado, regresado,
-                     repartidor_id, notas
-pagos             →  id, fecha, venta_id, monto, metodo,
-                     referencia, origen (manual/imap/webhook), estado
+                     a_cuenta, saldo, estado (PENDIENTE/PARCIAL/PAGADO),
+                     prestado, regresado, repartidor_id, notas
+pagos             →  id, fecha, venta_id, monto, metodo, estado (PENDIENTE/CONFIRMADO),
+                     referencia, pagador, origen (manual/imap/webhook)
 inventario_diario →  id, fecha, marca_id, inicio, comprados, vacios,
                      UNIQUE(fecha, marca_id)
 notificaciones    →  id, tipo, titulo, mensaje, meta, leida
-config            →  clave, valor  (datos del negocio, PIN, IMAP, Telegram)
-email_procesado   →  id, message_id, asunto, remitente, monto, referencia
+config            →  clave, valor  (datos del negocio, Yape, Telegram, IMAP)
+emails_procesados →  id, message_id, asunto, remitente, monto, referencia,
+                     pago_id  (dedupe de correos ya leídos)
 ```
 
 **Datos sembrados al instalar:**
 - Marcas: Solgas, Lima Gas, Repsol, Zeta Gas, Primax (editables).
 - Repartidores: Adolfo, David, Michael, Jose (editables).
+- Usuario administrador con PIN `1234` (cambiarlo en Configuración).
+
+**Invariante de saldos:** `a_cuenta` = suma de pagos CONFIRMADO; `saldo = total − a_cuenta`;
+el estado PENDIENTE/PARCIAL/PAGADO se recalcula en cada alta, baja o conciliación de pago.
 
 ---
 
@@ -161,9 +167,13 @@ email_procesado   →  id, message_id, asunto, remitente, monto, referencia
 
 Yape **no ofrece API pública** para cuentas personales. El sistema se conecta por **correo (IMAP)**:
 
-1. Un **worker** revisa el buzón cada 60 segundos.
-2. Cuando detecta un correo de pago Yape, extrae: **monto, pagador y código de operación**.
-3. Guarda la transacción, la concilia con una venta si coincide el código, y dispara la **notificación en pantalla + sonido + Telegram**.
+1. Un **worker** (arranca con el servidor y corre cada 60 segundos) revisa el buzón.
+2. Cuando detecta un correo de pago Yape, extrae **monto, pagador y código de operación** (ignora correos ya procesados).
+3. Si **exactamente una venta abierta** coincide con ese saldo, el pago se aplica solo
+   (**CONFIRMADO**) y se recalcula el saldo; si no, queda **PENDIENTE** en *Pagos*
+   para asignarla a mano con el selector "Asignar a…".
+4. Dispara la **notificación en pantalla + sonido + Telegram**.
+5. En *Configuración → Correo Yape* hay un botón **"Revisar correo ahora"** para no esperar al minuto.
 
 > **Nota:** Si el buzón no recibe los correos de Yape, el mismo adaptador permite conectar el reenvío desde el celular (MacroDroid / Tasker) o un webhook, sin rehacer el sistema.
 
@@ -173,48 +183,84 @@ Yape **no ofrece API pública** para cuentas personales. El sistema se conecta p
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | Next.js 16 (App Router) + Tailwind CSS + PWA instalable |
-| Backend | Next.js Server Actions + Route Handlers |
-| Base de datos | PostgreSQL (Supabase en nube / Docker local) |
-| ORM | Prisma 7 |
-| Autenticación | PIN + cookie `httpOnly` firmada |
-| Notificaciones | SSE + sonido + Telegram |
-| Correo Yape | Worker IMAP (`imapflow` + `mailparser`) |
-| Despliegue local | Docker Compose (PostgreSQL) + `npm run dev` |
-| Despliegue nube | Vercel / Railway + Supabase |
+| Frontend | Next.js 16 (App Router, cacheComponents) + Tailwind CSS 4 + PWA instalable |
+| Backend | Next.js Server Actions + Route Handlers (SSE y CSV) |
+| Base de datos | PostgreSQL **Neon** (la nube) · Prisma 7 + migraciones |
+| ORM | Prisma 7 (`prisma7.config.ts`, cliente generado en `app/generated/prisma`) |
+| Autenticación | PIN (scrypt) + cookie `httpOnly` firmada con HMAC (30 días) |
+| Notificaciones | SSE en vivo + sonido + Telegram (opcional) |
+| Correo Yape | Worker IMAP (`imapflow` + `mailparser`) vía `instrumentation.ts` |
+| Pruebas | `node scripts/e2e.mjs` (login, venta, saldo, CSV, conciliación Yape) |
 
 ---
 
-## 8. Despliegue (Local y Nube)
+## 8. Cómo ejecutar y despliegue
 
-- **Local:** El servidor corre en la PC del negocio; los celulares acceden por WiFi a la IP local. Sin costo mensual.
-- **Nube:** La misma aplicación y base de datos (Supabase) se publican con HTTPS para acceso desde cualquier lugar.
-- **Respaldo:** Exportación CSV/JSON y copias automáticas de la base de datos.
+### Requisitos
+- Node.js 22 o superior.
+- Base de datos PostgreSQL (ya conectada: **Neon**, credenciales en `.env`).
+
+### Instalación (PC local)
+```bash
+npm install
+npm run db:migrate    # aplica el esquema
+npm run db:seed       # marcas, repartidores y PIN admin
+npm run dev           # abre http://localhost:3000
+```
+
+### Compilar para uso real
+```bash
+npm run build
+npm start             # servidor optimizado en el puerto 3000
+```
+
+### Comandos útiles
+| Comando | Para qué |
+|---|---|
+| `npm run typecheck` / `npm run lint` | Verificar tipos y estilo |
+| `npm run db:migrate` / `npm run db:seed` | Migraciones y datos iniciales |
+| `npm run db:studio` | Explorar la base de datos en el navegador |
+| `npm run icons` | Regenerar los íconos de la PWA |
+| `node scripts/e2e.mjs` | Prueba E2E (requiere `npm start` corriendo) |
+
+### PWA
+Instalable desde el navegador ("Añadir a pantalla de inicio"): `public/manifest.webmanifest`,
+service worker con página *offline* e íconos en `public/icons/` (generados por `npm run icons`).
+
+### Despliegue
+- **Local (red del negocio):** `npm start` en la PC; los celulares entran por WiFi a `http://IP_DEL_PC:3000`. Sin costo mensual.
+- **Nube:** subir el proyecto a Vercel / Railway con las variables `DATABASE_URL` (usar el host con `-pooler` para entornos serverless) y `AUTH_SECRET`.
+- **Respaldo:** exportación CSV desde Reportes y respaldos automáticos de la base en Neon.
 
 ---
 
 ## 9. Fases de Desarrollo
 
-| Fase | Contenido |
-|---|---|
-| 1 | Scaffold Next.js + Tailwind + Prisma + PostgreSQL |
-| 2 | Esquema de base de datos, migraciones y datos sembrados |
-| 3 | Login PIN + layout + PWA instalable |
-| 4 | Módulo de ventas, clientes y pagos |
-| 5 | Inventario diario y cálculo de venta del día |
-| 6 | Dashboard y reportes |
-| 7 | Notificaciones en vivo (SSE + sonido + Telegram) |
-| 8 | Worker IMAP de Yape y conciliación de pagos |
-| 9 | Configuración, exportaciones y despliegue local/nube |
+| Fase | Contenido | Estado |
+|---|---|---|
+| 1 | Scaffold Next.js + Tailwind + Prisma + PostgreSQL | ✅ |
+| 2 | Esquema de base de datos, migraciones y datos sembrados | ✅ |
+| 3 | Login PIN + layout + PWA instalable | ✅ |
+| 4 | Módulo de ventas, clientes y pagos | ✅ |
+| 5 | Inventario diario y cálculo de venta del día | ✅ |
+| 6 | Dashboard y reportes | ✅ |
+| 7 | Notificaciones en vivo (SSE + sonido + Telegram) | ✅ |
+| 8 | Worker IMAP de Yape y conciliación de pagos | ✅ |
+| 9 | Configuración, exportaciones y despliegue local/nube | ✅ |
+
+Verificación automática: `node scripts/e2e.mjs` cubre login (PIN correcto e incorrecto),
+las 7 páginas protegidas, alta de venta con saldo, cliente, dashboard, CSV y la
+asignación de un pago Yape pendiente con recálculo de saldo.
 
 ---
 
 ## 10. Puntos Pendientes de Confirmación
 
-- [ ] Credenciales de base de datos (Supabase o Docker local).
-- [ ] Correo IMAP donde llegarían las notificaciones de Yape (host, usuario, contraseña de aplicación).
-- [ ] Datos del negocio: nombre, teléfono, dirección y precios por marca.
-- [ ] Confirmación del PIN inicial para el acceso.
+- [ ] Credenciales de correo IMAP (host, usuario, contraseña de aplicación) en *Configuración → Correo Yape*.
+- [ ] Cambiar el PIN inicial `1234` y completar datos del negocio + precios por marca.
+- [ ] Probar la instalación de la PWA en el celular del negocio.
+- [ ] (Opcional) Token de Telegram para alertas.
+- [ ] (Opcional) Publicar en la nube con dominio propio.
 
 ---
 

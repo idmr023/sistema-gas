@@ -1,0 +1,219 @@
+// Esquema del Sistema de Gas
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ────────────────────────────── Enums ──────────────────────────────
+
+enum EstadoVenta {
+  PENDIENTE // sin pagos
+  PARCIAL // pagó parte, queda saldo
+  PAGADO // total cubierto
+}
+
+enum MetodoPago {
+  EFECTIVO
+  YAPE
+  TRANSFERENCIA
+  OTRO
+}
+
+enum OrigenPago {
+  MANUAL // capturado a mano
+  IMAP // leído de un correo de Yape
+  WEBHOOK // recibido por webhook
+}
+
+enum EstadoPago {
+  PENDIENTE // aún no asociado/validado
+  CONFIRMADO
+}
+
+enum Rol {
+  ADMIN
+  OPERADOR
+  REPARTIDOR
+}
+
+enum TipoNotificacion {
+  INFO
+  VENTA
+  YAPE
+  ALERTA
+}
+
+// ────────────────────────────── Datos base ──────────────────────────────
+
+model Marca {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique
+  precioDefecto Decimal  @default(0) @db.Decimal(10, 2)
+  activo        Boolean  @default(true)
+  ventas        Venta[]
+  inventarios   InventarioDiario[]
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("marcas")
+}
+
+model Repartidor {
+  id       Int      @id @default(autoincrement())
+  nombre   String   @unique
+  telefono String?
+  activo   Boolean  @default(true)
+  ventas   Venta[]
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("repartidores")
+}
+
+model Cliente {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  direccion String?
+  telefono  String?
+  notas     String?
+  ventas    Venta[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("clientes")
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  pinHash   String   @map("pin_hash")
+  rol       Rol      @default(ADMIN)
+  telefono  String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("usuarios")
+}
+
+// ────────────────────────────── Ventas ──────────────────────────────
+
+model Venta {
+  id             Int         @id @default(autoincrement())
+  fecha          DateTime    @db.Date
+  clienteId      Int?        @map("cliente_id")
+  cliente        Cliente?    @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  clienteNombre  String?     @map("cliente_nombre")
+  direccion      String?
+  telefono       String?
+  premium        Boolean     @default(false)
+  marcaId        Int?        @map("marca_id")
+  marca          Marca?      @relation(fields: [marcaId], references: [id], onDelete: SetNull)
+  cantidad       Int         @default(1)
+  valorUnitario  Decimal     @default(0) @map("valor_unitario") @db.Decimal(10, 2)
+  total          Decimal     @default(0) @db.Decimal(10, 2)
+  aCuenta        Decimal     @default(0) @map("a_cuenta") @db.Decimal(10, 2)
+  saldo          Decimal     @default(0) @db.Decimal(10, 2)
+  estado         EstadoVenta @default(PENDIENTE)
+  prestado       Boolean     @default(false)
+  regresado      Boolean     @default(false)
+  repartidorId   Int?        @map("repartidor_id")
+  repartidor     Repartidor? @relation(fields: [repartidorId], references: [id], onDelete: SetNull)
+  notas          String?
+  pagos          Pago[]
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  @@index([fecha])
+  @@index([estado])
+  @@index([repartidorId])
+  @@index([clienteId])
+  @@map("ventas")
+}
+
+model Pago {
+  id         Int         @id @default(autoincrement())
+  fecha      DateTime    @db.Date
+  ventaId    Int?        @map("venta_id")
+  venta      Venta?      @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  monto      Decimal     @db.Decimal(10, 2)
+  metodo     MetodoPago  @default(EFECTIVO)
+  estado     EstadoPago  @default(CONFIRMADO)
+  origen     OrigenPago  @default(MANUAL)
+  referencia String? // código de operación / operación Yape
+  pagador    String? // quién pagó (para conciliar Yape)
+  nota       String?
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@index([fecha])
+  @@index([ventaId])
+  @@index([referencia])
+  @@map("pagos")
+}
+
+// ────────────────────────────── Inventario diario ──────────────────────────────
+
+model InventarioDiario {
+  id         Int     @id @default(autoincrement())
+  fecha      DateTime @db.Date
+  marcaId    Int     @map("marca_id")
+  marca      Marca   @relation(fields: [marcaId], references: [id], onDelete: Cascade)
+  inicio     Int     @default(0) // balones con los que se inicia el día
+  comprados  Int     @default(0) // balones comprados en el día
+  vacios     Int     @default(0) // balones vacíos al final del día
+  notas      String?
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // venta del día = inicio + comprados - vacios (calculado en consultas)
+
+  @@unique([fecha, marcaId])
+  @@index([fecha])
+  @@map("inventario_diario")
+}
+
+// ────────────────────────────── Notificaciones ──────────────────────────────
+
+model Notificacion {
+  id        Int               @id @default(autoincrement())
+  tipo      TipoNotificacion  @default(INFO)
+  titulo    String
+  mensaje   String?
+  meta      Json?
+  leida     Boolean           @default(false)
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  @@index([leida])
+  @@index([createdAt])
+  @@map("notificaciones")
+}
+
+// ────────────────────────────── Correo / Yape (IMAP) ──────────────────────────────
+
+model EmailProcesado {
+  id          Int      @id @default(autoincrement())
+  messageId   String   @unique @map("message_id")
+  remitente   String?
+  asunto      String?
+  fechaCorreo DateTime @db.Date @map("fecha_correo")
+  monto       Decimal? @db.Decimal(10, 2)
+  referencia  String?
+  pagador     String?
+  crudo       String? // cuerpo resumido para depuración
+  pagoId      Int?      @map("pago_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("emails_procesados")
+}
+
+// ────────────────────────────── Configuración ──────────────────────────────
+
+model Config {
+  clave   String  @id
+  valor   String?
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("config")
+}

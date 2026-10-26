@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sin conexión · Sistema de Gas</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #fffbeb;
+        color: #1e293b;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 24px;
+        text-align: center;
+      }
+      .caja { max-width: 22rem; }
+      h1 { font-size: 1.4rem; margin: 0 0 8px; }
+      p { color: #64748b; line-height: 1.5; }
+      button {
+        margin-top: 16px;
+        background: #f59e0b;
+        color: white;
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="caja">
+      <div style="font-size: 3rem">📡</div>
+      <h1>Sin conexión</h1>
+      <p>No hay internet en este momento. Los datos no se han perdido: vuelve a intentarlo.</p>
+      <button onclick="location.reload()">Reintentar</button>
+    </div>
+  </body>
+</html>

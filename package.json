@@ -1,0 +1,22 @@
+{
+  "name": "sistema-gas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema web integral (ventas, inventario diario y pagos Yape) para negocio de gas",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate",
+    "icons": "node scripts/gen-icons.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
