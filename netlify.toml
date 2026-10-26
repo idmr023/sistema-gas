@@ -1,12 +1,5 @@
 [build]
   command = "npm install && npx prisma generate && npx next build"
-  publish = ".next"
-  function_directory = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "22"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
