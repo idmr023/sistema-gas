@@ -16,6 +16,9 @@
     "db:generate": "prisma generate",
     "icons": "node scripts/gen-icons.mjs"
   },
+  "dependencies": {
+    "next": "^16.4.3"
+  },
   "engines": {
     "node": ">=22"
   }
