@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npx --package prisma@6 prisma generate && npx next build"
+  command = "npm install && npx prisma generate && npx next build"
   publish = ".next"
   function_directory = "netlify/functions"
 
