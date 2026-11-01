@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { exigirSesion } from "@/lib/auth";
 import { num, sol } from "@/lib/money";
@@ -9,7 +10,19 @@ import BotonEliminar from "@/components/boton-eliminar";
 
 export const metadata = { title: "Clientes" };
 
-export default async function ClientesPage({
+export default function ClientesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <ClientesPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function ClientesPageContent({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

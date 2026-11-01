@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { exigirSesion } from "@/lib/auth";
 import { isoAFecha, hoyISO, diasAtrasISO, fechaLarga } from "@/lib/dates";
@@ -5,7 +6,19 @@ import { num, sol, aDecimal, pct } from "@/lib/money";
 
 export const metadata = { title: "Reportes" };
 
-export default async function ReportesPage({
+export default function ReportesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <ReportesPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function ReportesPageContent({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

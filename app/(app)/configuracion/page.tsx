@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { exigirSesion } from "@/lib/auth";
 import {
@@ -12,7 +13,15 @@ import RevisarCorreo from "@/components/revisar-correo";
 
 export const metadata = { title: "Configuración" };
 
-export default async function ConfiguracionPage() {
+export default function ConfiguracionPage() {
+  return (
+    <Suspense fallback={null}>
+      <ConfiguracionPageContent />
+    </Suspense>
+  );
+}
+
+async function ConfiguracionPageContent() {
   await exigirSesion();
 
   const [filas, marcas, reps] = await Promise.all([
@@ -64,7 +73,7 @@ export default async function ConfiguracionPage() {
           marcas={marcas.map((m) => ({
             id: m.id,
             nombre: m.nombre,
-            precioDefecto: m.precioDefecto as unknown as number,
+            precioDefecto: Number(m.precioDefecto),
             activo: m.activo,
           }))}
         />

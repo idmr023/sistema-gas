@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { exigirSesion } from "@/lib/auth";
 import { marcarLeidas } from "@/lib/actions/notificaciones";
@@ -11,7 +12,19 @@ const ICONOS: Record<string, string> = {
   ALERTA: "⚠️",
 };
 
-export default async function NotificacionesPage({
+export default function NotificacionesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <NotificacionesPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function NotificacionesPageContent({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

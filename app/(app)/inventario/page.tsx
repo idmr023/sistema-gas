@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { exigirSesion } from "@/lib/auth";
 import { hoyISO, moverDias, isoAFecha, fechaLegible, fechaLarga } from "@/lib/dates";
@@ -6,7 +7,19 @@ import InventarioForm from "@/components/inventario-form";
 
 export const metadata = { title: "Inventario" };
 
-export default async function InventarioPage({
+export default function InventarioPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <InventarioPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function InventarioPageContent({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

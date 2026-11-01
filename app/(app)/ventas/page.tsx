@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { exigirSesion } from "@/lib/auth";
@@ -10,7 +11,19 @@ export const metadata = { title: "Ventas" };
 
 const ESTADOS = ["", "PENDIENTE", "PARCIAL", "PAGADO"];
 
-export default async function VentasPage({
+export default function VentasPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <VentasPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function VentasPageContent({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { exigirSesion } from "@/lib/auth";
@@ -16,7 +17,19 @@ const ORIGEN: Record<string, string> = {
   WEBHOOK: "Webhook",
 };
 
-export default async function PagosPage({
+export default function PagosPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <PagosPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function PagosPageContent({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

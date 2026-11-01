@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { exigirSesion } from "@/lib/auth";
 import { hoyISO, fechaLegible } from "@/lib/dates";
@@ -6,7 +7,15 @@ import VentaForm from "@/components/venta-form";
 
 export const metadata = { title: "Nueva venta" };
 
-export default async function NuevaVentaPage() {
+export default function NuevaVentaPage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevaVentaPageContent />
+    </Suspense>
+  );
+}
+
+async function NuevaVentaPageContent() {
   await exigirSesion();
 
   const [marcas, repartidores, clientes] = await Promise.all([
@@ -31,7 +40,7 @@ export default async function NuevaVentaPage() {
         marcas={marcas.map((m) => ({
           id: m.id,
           nombre: m.nombre,
-          precioDefecto: m.precioDefecto as unknown as number,
+          precioDefecto: Number(m.precioDefecto),
         }))}
         repartidores={repartidores}
         clientes={clientes.map((c) => ({
