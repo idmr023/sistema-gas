@@ -1,6 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 const COOKIE = "gas_session";
 const DURACION = 30 * 24 * 3600 * 1000; // 30 días
@@ -27,10 +28,11 @@ export function firmarSesion(data: Omit<Sesion, "exp">): string {
   return `${body}.${firmar(body)}`;
 }
 
-function verificar(token: string | undefined): Sesion | null {
+async function verificar(token: string | undefined): Promise<Sesion | null> {
   if (!token || !token.includes(".")) return null;
   const [body, sig] = token.split(".");
   try {
+    await connection();
     const esperado = firmar(body);
     if (sig.length !== esperado.length) return null;
     if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(esperado))) return null;

@@ -1,11 +1,20 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { getSesion } from "@/lib/auth";
 import LoginForm from "./login-form";
 
 export const metadata = { title: "Iniciar sesión" };
 export const instant = false;
 
-export default async function LoginPage() {
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+async function LoginContent() {
   const sesion = await getSesion();
   if (sesion) redirect("/dashboard");
 

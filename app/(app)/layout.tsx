@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { exigirSesion } from "@/lib/auth";
 import { Sidebar, BottomNav } from "@/components/nav";
 import Notificaciones from "@/components/notificaciones";
@@ -6,7 +7,19 @@ import Notificaciones from "@/components/notificaciones";
 // se permite que la ruta bloquee en el servidor (Next 16 + cacheComponents).
 export const instant = false;
 
-export default async function AppLayout({
+export default function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <AppLayoutContent>{children}</AppLayoutContent>
+    </Suspense>
+  );
+}
+
+async function AppLayoutContent({
   children,
 }: {
   children: React.ReactNode;
@@ -25,21 +38,17 @@ export default async function AppLayout({
             </span>
             <span className="text-sm font-extrabold">Sistema de Gas</span>
           </div>
-
           <div className="hidden items-center gap-3 lg:flex">
             <span className="text-sm font-bold text-slate-600">
               {sesion.nombre}
             </span>
             <span className="badge badge-slate">{sesion.rol}</span>
           </div>
-
           <Notificaciones />
         </header>
-
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 pb-28 lg:pb-10">
           {children}
         </main>
-
         <BottomNav />
       </div>
     </div>

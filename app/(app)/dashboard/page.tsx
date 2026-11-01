@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { exigirSesion } from "@/lib/auth";
 import { fechaLegible, fechaLarga } from "@/lib/dates";
 import { num, sol } from "@/lib/money";
 import { resumenHoy, serieDiaria, porRepartidor, balonesPrestados, saldosPendientes } from "@/lib/queries";
@@ -7,8 +6,6 @@ import { resumenHoy, serieDiaria, porRepartidor, balonesPrestados, saldosPendien
 export const metadata = { title: "Inicio" };
 
 export default async function Dashboard() {
-  await exigirSesion();
-
   const [hoy, semana, reps, prestados, saldos] = await Promise.all([
     resumenHoy(),
     serieDiaria(7),
