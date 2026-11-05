@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { exigirSesion } from "@/lib/auth";
+import { exigirPermiso } from "@/lib/auth";
 import { hoyISO, fechaLegible } from "@/lib/dates";
 import VentaForm from "@/components/venta-form";
 
@@ -16,7 +16,7 @@ export default function NuevaVentaPage() {
 }
 
 async function NuevaVentaPageContent() {
-  await exigirSesion();
+  await exigirPermiso("ventas");
 
   const [marcas, repartidores, clientes] = await Promise.all([
     prisma.marca.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),

@@ -17,6 +17,8 @@
     "icons": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
+    "@neon/config": "^1.11.3",
+    "@neon/env": "^1.6.15",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "@tailwindcss/turbopack": "^4.3.3",
@@ -24,12 +26,16 @@
     "imapflow": "^2.9.1",
     "mailparser": "^3.12.4",
     "next": "^16.4.3",
+    "otpauth": "^9.6.0",
+    "qrcode": "^1.5.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.3",
     "prisma": "^7.10.1",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   },
   "engines": {

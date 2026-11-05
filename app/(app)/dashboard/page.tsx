@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { exigirSesion } from "@/lib/auth";
-import { fechaLegible, fechaLarga } from "@/lib/dates";
+import { fechaLegible, fechaLarga, hoyISO } from "@/lib/dates";
 import { num, sol } from "@/lib/money";
 import { resumenHoy, serieDiaria, porRepartidor, balonesPrestados, saldosPendientes } from "@/lib/queries";
+import { prisma } from "@/lib/prisma";
 
 export const metadata = { title: "Inicio" };
 
@@ -18,12 +19,18 @@ export default function Dashboard() {
 async function DashboardContent() {
   await exigirSesion();
 
-  const [hoy, semana, reps, prestados, saldos] = await Promise.all([
+  const [hoy, semana, reps, prestados, saldos, caja, gastosHoy] = await Promise.all([
     resumenHoy(),
     serieDiaria(7),
     porRepartidor(),
     balonesPrestados(),
     saldosPendientes(),
+    prisma.caja.findUnique({ where: { fecha: new Date(`${hoyISO()}T00:00:00.000Z`) } }),
+    prisma.gasto.aggregate({
+      where: { fecha: new Date(`${hoyISO()}T00:00:00.000Z`) },
+      _sum: { monto: true },
+      _count: true,
+    }),
   ]);
 
   const max = Math.max(...semana.map((d) => d.total), 1);
@@ -67,9 +74,36 @@ async function DashboardContent() {
         <Link href="/inventario" className="card flex items-center gap-3 font-bold hover:bg-brand-50">
           🛢️ Inventario
         </Link>
-        <Link href="/pagos" className="card flex items-center gap-3 font-bold hover:bg-brand-50">
-          💰 Pagos
+        <Link href="/cajas" className="card flex items-center gap-3 font-bold hover:bg-brand-50">
+          💵 Cajas
         </Link>
+        <Link href="/gastos" className="card flex items-center gap-3 font-bold hover:bg-brand-50">
+          💸 Gastos
+        </Link>
+      </div>
+
+      {/* Estado de caja y gastos */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <div className="card stat">
+          <span className="stat-label">Caja de hoy</span>
+          <span className="stat-value">
+            {caja
+              ? caja.estado === "ABIERTA"
+                ? "🔓 Abierta"
+                : "🔒 Cerrada"
+              : "—"}
+          </span>
+          <span className="text-xs text-slate-400">
+            {caja ? `Apertura: ${sol(Number(caja.montoApertura))}` : "Sin registrar"}
+          </span>
+        </div>
+        <div className="card stat">
+          <span className="stat-label">Gastos hoy</span>
+          <span className="stat-value text-red-600">
+            {gastosHoy._count > 0 ? `−${sol(Number(gastosHoy._sum.monto))}` : "S/ 0.00"}
+          </span>
+          <span className="text-xs text-slate-400">{gastosHoy._count} registro(s)</span>
+        </div>
         <Link href="/reportes" className="card flex items-center gap-3 font-bold hover:bg-brand-50">
           📈 Reportes
         </Link>

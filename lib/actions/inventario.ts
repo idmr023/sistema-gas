@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { exigirSesion } from "@/lib/auth";
+import { exigirPermisoApi } from "@/lib/auth";
 import { isoAFecha, moverDias, hoyISO } from "@/lib/dates";
 import { notificar } from "@/lib/notify";
 
@@ -21,7 +21,7 @@ export async function guardarInventario(
   _prev: ResultadoInv,
   formData: FormData,
 ): Promise<ResultadoInv> {
-  await exigirSesion();
+  await exigirPermisoApi("inventario");
 
   const fecha = String(formData.get("fecha") ?? hoyISO());
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
@@ -74,7 +74,7 @@ export async function guardarInventario(
 
 /** Inicio del día = vacíos del día anterior (rellenado de sugerencia). */
 export async function inicioDeAyer(fecha: string): Promise<Record<number, number>> {
-  await exigirSesion();
+  await exigirPermisoApi("inventario");
   const ayer = moverDias(fecha, -1);
   const registros = await prisma.inventarioDiario.findMany({
     where: { fecha: isoAFecha(ayer) },
@@ -85,7 +85,7 @@ export async function inicioDeAyer(fecha: string): Promise<Record<number, number
 
 /** Aviso si el cálculo no cuadra con las ventas registradas. */
 export async function cuadreDelDia(fecha: string) {
-  await exigirSesion();
+  await exigirPermisoApi("inventario");
   const f = isoAFecha(fecha);
   const [inv, ventas] = await Promise.all([
     prisma.inventarioDiario.findMany({ where: { fecha: f } }),
@@ -100,7 +100,7 @@ export async function cuadreDelDia(fecha: string) {
 }
 
 export async function avisarDescuadre(fecha: string, marca: string, dif: number) {
-  await exigirSesion();
+  await exigirPermisoApi("inventario");
   await notificar({
     tipo: "ALERTA",
     titulo: `Descuadre de inventario (${fecha})`,

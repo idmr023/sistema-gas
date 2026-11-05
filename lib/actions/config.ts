@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { exigirSesion } from "@/lib/auth";
-import { hashPin, verifyPin } from "@/lib/pin";
+import { exigirPermisoApi } from "@/lib/auth";
 
 export type ResultadoCfg = { ok: boolean; error?: string };
 
@@ -35,7 +34,7 @@ export async function guardarConfig(
   _prev: ResultadoCfg,
   formData: FormData,
 ): Promise<ResultadoCfg> {
-  await exigirSesion();
+  await exigirPermisoApi("configuracion");
 
   const datos: Record<string, string> = {};
   for (const clave of CLAVES) {
@@ -63,39 +62,6 @@ export async function guardarConfig(
   return { ok: true };
 }
 
-export async function cambiarPin(
-  _prev: ResultadoCfg,
-  formData: FormData,
-): Promise<ResultadoCfg> {
-  await exigirSesion();
-
-  const actual = String(formData.get("actual") ?? "");
-  const nuevo = String(formData.get("nuevo") ?? "");
-  const repetir = String(formData.get("repetir") ?? "");
-
-  if (!/^\d{4,8}$/.test(nuevo)) {
-    return { ok: false, error: "El nuevo PIN debe tener de 4 a 8 dígitos." };
-  }
-  if (nuevo !== repetir) return { ok: false, error: "Los PIN no coinciden." };
-
-  const fila = await prisma.config.findUnique({ where: { clave: "pin_hash" } });
-  if (!fila?.valor || !verifyPin(actual, fila.valor)) {
-    return { ok: false, error: "El PIN actual es incorrecto." };
-  }
-
-  await prisma.config.upsert({
-    where: { clave: "pin_hash" },
-    update: { valor: hashPin(nuevo) },
-    create: { clave: "pin_hash", valor: hashPin(nuevo) },
-  });
-
-  // El usuario que entra también puede usar la tabla de usuarios (futuro multiusuario).
-  await prisma.usuario.updateMany({ data: { pinHash: hashPin(nuevo) } });
-
-  revalidatePath("/configuracion");
-  return { ok: true };
-}
-
 /* ── Marcas ─────────────────────────────────────────── */
 
 const esquemaMarca = z.object({
@@ -109,7 +75,7 @@ export async function guardarMarca(
   _prev: ResultadoCfg,
   formData: FormData,
 ): Promise<ResultadoCfg> {
-  await exigirSesion();
+  await exigirPermisoApi("configuracion");
 
   const parsed = esquemaMarca.safeParse({
     id: Number(formData.get("id")) || null,
@@ -136,7 +102,7 @@ export async function guardarMarca(
 }
 
 export async function eliminarMarca(id: number): Promise<ResultadoCfg> {
-  await exigirSesion();
+  await exigirPermisoApi("configuracion");
   try {
     await prisma.marca.update({ where: { id }, data: { activo: false } });
   } catch {
@@ -159,7 +125,7 @@ export async function guardarRepartidor(
   _prev: ResultadoCfg,
   formData: FormData,
 ): Promise<ResultadoCfg> {
-  await exigirSesion();
+  await exigirPermisoApi("configuracion");
 
   const parsed = esquemaRep.safeParse({
     id: Number(formData.get("id")) || null,
@@ -186,7 +152,7 @@ export async function guardarRepartidor(
 }
 
 export async function eliminarRepartidor(id: number): Promise<ResultadoCfg> {
-  await exigirSesion();
+  await exigirPermisoApi("configuracion");
   try {
     await prisma.repartidor.update({ where: { id }, data: { activo: false } });
   } catch {

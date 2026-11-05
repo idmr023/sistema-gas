@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { exigirSesion } from "@/lib/auth";
+import { exigirSesion, getPermisos } from "@/lib/auth";
 import { Sidebar, BottomNav } from "@/components/nav";
 import Notificaciones from "@/components/notificaciones";
 
@@ -25,10 +25,11 @@ async function AppLayoutContent({
   children: React.ReactNode;
 }) {
   const sesion = await exigirSesion();
+  const permisos = await getPermisos(sesion.rolId);
 
   return (
     <div>
-      <Sidebar nombre={sesion.nombre} rol={sesion.rol} />
+      <Sidebar nombre={sesion.nombre} rol={sesion.rol} permisos={permisos} />
 
       <div className="flex min-h-dvh flex-col lg:pl-60">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur">
@@ -49,7 +50,7 @@ async function AppLayoutContent({
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 pb-28 lg:pb-10">
           {children}
         </main>
-        <BottomNav />
+        <BottomNav permisos={permisos} />
       </div>
     </div>
   );

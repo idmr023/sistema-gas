@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { notificar } from "@/lib/notify";
-import { exigirSesion } from "@/lib/auth";
+import { exigirPermisoApi, exigirPermisoApiAlguno } from "@/lib/auth";
 import { isoAFecha, hoyISO } from "@/lib/dates";
 import { num, r2 } from "@/lib/money";
 import { normPhone } from "@/lib/phone";
@@ -138,7 +138,7 @@ export async function crearVenta(
   _prev: Resultado,
   formData: FormData,
 ): Promise<Resultado> {
-  await exigirSesion();
+  await exigirPermisoApi("ventas");
 
   let datos: z.infer<typeof esquemaVenta>;
   try {
@@ -210,7 +210,7 @@ export async function registrarPago(
   _prev: Resultado,
   formData: FormData,
 ): Promise<Resultado> {
-  await exigirSesion();
+  await exigirPermisoApiAlguno("pagos", "ventas");
 
   const raw = {
     ventaId: Number(formData.get("ventaId")),
@@ -285,7 +285,7 @@ export async function registrarPago(
 }
 
 export async function eliminarVenta(id: number): Promise<Resultado> {
-  await exigirSesion();
+  await exigirPermisoApi("ventas");
   try {
     await prisma.venta.delete({ where: { id } });
   } catch {
@@ -297,7 +297,7 @@ export async function eliminarVenta(id: number): Promise<Resultado> {
 }
 
 export async function alternarRegresado(id: number): Promise<Resultado> {
-  await exigirSesion();
+  await exigirPermisoApi("ventas");
   const venta = await prisma.venta.findUnique({ where: { id } });
   if (!venta) return { ok: false, error: "Venta no encontrada." };
   await prisma.venta.update({
@@ -310,7 +310,7 @@ export async function alternarRegresado(id: number): Promise<Resultado> {
 }
 
 export async function eliminarPago(id: number): Promise<Resultado> {
-  await exigirSesion();
+  await exigirPermisoApiAlguno("pagos", "ventas");
   const pago = await prisma.pago.findUnique({ where: { id } });
   if (!pago) return { ok: false, error: "Pago no encontrado." };
   await prisma.pago.delete({ where: { id } });
@@ -325,7 +325,7 @@ export async function asignarPago(
   _prev: Resultado,
   formData: FormData,
 ): Promise<Resultado> {
-  await exigirSesion();
+  await exigirPermisoApiAlguno("pagos", "ventas");
 
   const pagoId = Number(formData.get("pagoId"));
   const ventaId = Number(formData.get("ventaId"));

@@ -1,7 +1,9 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { hashPin } from "../lib/pin";
+import { hashPassword } from "../lib/password";
+
+dotenv.config({ path: [".env", ".env.local"], override: true });
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -15,6 +17,53 @@ const MARCAS: [string, number][] = [
 ];
 
 const REPARTIDORES = ["Adolfo", "David", "Michael", "Jose"];
+
+const TODOS_PERMISOS = [
+  "ventas",
+  "pagos",
+  "clientes",
+  "inventario",
+  "cajas",
+  "gastos",
+  "reportes",
+  "configuracion",
+  "usuarios",
+  "roles",
+] as const;
+
+type RolSeed = {
+  nombre: string;
+  requiere2fa: boolean;
+  puedeLogin: boolean;
+  permisos: string[];
+};
+
+const ROLES: RolSeed[] = [
+  {
+    nombre: "ADMIN",
+    requiere2fa: true,
+    puedeLogin: true,
+    permisos: [...TODOS_PERMISOS],
+  },
+  {
+    nombre: "DESARROLLADOR",
+    requiere2fa: true,
+    puedeLogin: true,
+    permisos: TODOS_PERMISOS.filter((p) => p !== "clientes"),
+  },
+  {
+    nombre: "COLABORADOR",
+    requiere2fa: false,
+    puedeLogin: true,
+    permisos: ["ventas", "pagos", "inventario", "gastos"],
+  },
+  {
+    nombre: "CLIENTE",
+    requiere2fa: false,
+    puedeLogin: false,
+    permisos: [],
+  },
+];
 
 const CONFIG_DEFAULTS: Record<string, string> = {
   nombre_negocio: "Distribuidora de Gas",
@@ -34,6 +83,24 @@ const CONFIG_DEFAULTS: Record<string, string> = {
 };
 
 async function main() {
+  for (const rol of ROLES) {
+    await prisma.rol.upsert({
+      where: { nombre: rol.nombre },
+      update: {
+        requiere2fa: rol.requiere2fa,
+        puedeLogin: rol.puedeLogin,
+        permisos: rol.permisos,
+      },
+      create: {
+        nombre: rol.nombre,
+        requiere2fa: rol.requiere2fa,
+        puedeLogin: rol.puedeLogin,
+        permisos: rol.permisos,
+        esSistema: true,
+      },
+    });
+  }
+
   for (const [nombre, precio] of MARCAS) {
     await prisma.marca.upsert({
       where: { nombre },
@@ -52,14 +119,31 @@ async function main() {
 
   const usuarios = await prisma.usuario.count();
   if (usuarios === 0) {
+    const admin = await prisma.rol.findUnique({ where: { nombre: "ADMIN" } });
+    const colaborador = await prisma.rol.findUnique({
+      where: { nombre: "COLABORADOR" },
+    });
+    if (!admin || !colaborador) throw new Error("Faltan roles sembrados.");
+
     await prisma.usuario.create({
       data: {
         nombre: "admin",
-        pinHash: hashPin("1234"),
-        rol: "ADMIN",
+        passwordHash: hashPassword("Admin123!"),
+        mustChangePassword: true,
+        rolId: admin.id,
       },
     });
-    console.log("Usuario admin creado (PIN: 1234) — cambiar en Configuración.");
+    await prisma.usuario.create({
+      data: {
+        nombre: "colaborador",
+        passwordHash: hashPassword("Colabora123!"),
+        mustChangePassword: true,
+        rolId: colaborador.id,
+      },
+    });
+    console.log(
+      "Usuarios creados: admin (Admin123!), colaborador (Colabora123!) — cambiar contraseña en el primer inicio.",
+    );
   }
 
   for (const [clave, valor] of Object.entries(CONFIG_DEFAULTS)) {
@@ -69,7 +153,10 @@ async function main() {
 
   const marcas = await prisma.marca.count();
   const reps = await prisma.repartidor.count();
-  console.log(`Seed listo → ${marcas} marcas, ${reps} repartidores, ${usuarios} usuario(s) previos.`);
+  const roles = await prisma.rol.count();
+  console.log(
+    `Seed listo → ${roles} roles, ${marcas} marcas, ${reps} repartidores, ${usuarios} usuario(s) previos.`,
+  );
 }
 
 main()

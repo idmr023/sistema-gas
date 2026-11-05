@@ -1,5 +1,8 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import { defineConfig } from "prisma/config";
+
+// Cargar .env / .env.local con precedencia sobre el entorno heredado
+dotenv.config({ path: [".env", ".env.local"], override: true });
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -8,6 +11,7 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Migraciones sobre la conexión directa (no pooled) — regla de Neon
+    url: process.env["DATABASE_URL_UNPOOLED"] ?? process.env["DATABASE_URL"],
   },
 });

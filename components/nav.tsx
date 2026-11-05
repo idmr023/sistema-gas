@@ -4,19 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { _logout } from "@/app/login/actions";
 
-type Item = { href: string; label: string; icon: string; corto?: string };
+type Item = { href: string; label: string; icon: string; corto?: string; perm?: string };
 
 const secciones: Item[] = [
   { href: "/dashboard", label: "Inicio", icon: "📊", corto: "Inicio" },
-  { href: "/ventas", label: "Ventas", icon: "🧾", corto: "Ventas" },
-  { href: "/inventario", label: "Inventario", icon: "🛢️", corto: "Inventario" },
-  { href: "/reportes", label: "Reportes", icon: "📈", corto: "Reportes" },
-  { href: "/configuracion", label: "Configuración", icon: "⚙️", corto: "Ajustes" },
+  { href: "/ventas", label: "Ventas", icon: "🧾", corto: "Ventas", perm: "ventas" },
+  { href: "/inventario", label: "Inventario", icon: "🛢️", corto: "Inventario", perm: "inventario" },
+  { href: "/cajas", label: "Cajas", icon: "💵", corto: "Cajas", perm: "cajas" },
+  { href: "/gastos", label: "Gastos", icon: "💸", corto: "Gastos", perm: "gastos" },
+  { href: "/reportes", label: "Reportes", icon: "📈", corto: "Reportes", perm: "reportes" },
+  { href: "/configuracion", label: "Configuración", icon: "⚙️", corto: "Ajustes", perm: "configuracion" },
 ];
 
 const extras: Item[] = [
-  { href: "/clientes", label: "Clientes", icon: "👥" },
-  { href: "/pagos", label: "Pagos", icon: "💰" },
+  { href: "/clientes", label: "Clientes", icon: "👥", perm: "clientes" },
+  { href: "/pagos", label: "Pagos", icon: "💰", perm: "pagos" },
+  { href: "/usuarios", label: "Usuarios", icon: "👤", perm: "usuarios" },
+  { href: "/roles", label: "Roles", icon: "🔐", perm: "roles" },
   { href: "/notificaciones", label: "Notificaciones", icon: "🔔" },
 ];
 
@@ -24,7 +28,19 @@ function activa(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar({ nombre, rol }: { nombre: string; rol: string }) {
+function visibles(items: Item[], permisos: string[]): Item[] {
+  return items.filter((i) => !i.perm || permisos.includes(i.perm));
+}
+
+export function Sidebar({
+  nombre,
+  rol,
+  permisos,
+}: {
+  nombre: string;
+  rol: string;
+  permisos: string[];
+}) {
   const pathname = usePathname();
 
   return (
@@ -37,7 +53,7 @@ export function Sidebar({ nombre, rol }: { nombre: string; rol: string }) {
       </Link>
 
       <nav className="flex flex-1 flex-col gap-1">
-        {[...secciones, ...extras].map((item) => (
+        {visibles([...secciones, ...extras], permisos).map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -64,13 +80,13 @@ export function Sidebar({ nombre, rol }: { nombre: string; rol: string }) {
   );
 }
 
-export function BottomNav() {
+export function BottomNav({ permisos }: { permisos: string[] }) {
   const pathname = usePathname();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur lg:hidden">
       <div className="mx-auto flex max-w-md items-stretch justify-around">
-        {secciones.map((item) => (
+        {visibles(secciones, permisos).map((item) => (
           <Link
             key={item.href}
             href={item.href}

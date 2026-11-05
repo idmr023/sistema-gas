@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import {
   guardarConfig,
-  cambiarPin,
   guardarMarca,
   guardarRepartidor,
   type ResultadoCfg,
@@ -145,41 +144,6 @@ export function ImapForm({ cfg }: { cfg: Record<string, string> }) {
       <Aviso estado={estado} />
       <button className="btn btn-primary" disabled={pendiente}>
         {pendiente ? "Guardando…" : "Guardar"}
-      </button>
-    </form>
-  );
-}
-
-/* ── PIN ───────────────────────────────────────────── */
-
-export function PinForm() {
-  const [estado, accion, pendiente] = useActionState(cambiarPin, inicial);
-  const ref = useRef<HTMLFormElement>(null);
-  const listo = estado.ok;
-
-  useEffect(() => {
-    if (listo) ref.current?.reset();
-  }, [listo]);
-
-  return (
-    <form ref={ref} action={accion} className="flex flex-col gap-3">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div>
-          <label className="label" htmlFor="actual">PIN actual</label>
-          <input id="actual" name="actual" type="password" inputMode="numeric" className="input" required />
-        </div>
-        <div>
-          <label className="label" htmlFor="nuevo">PIN nuevo</label>
-          <input id="nuevo" name="nuevo" type="password" inputMode="numeric" maxLength={8} className="input" required />
-        </div>
-        <div>
-          <label className="label" htmlFor="repetir">Repetir</label>
-          <input id="repetir" name="repetir" type="password" inputMode="numeric" maxLength={8} className="input" required />
-        </div>
-      </div>
-      <Aviso estado={estado} />
-      <button className="btn btn-primary" disabled={pendiente}>
-        {pendiente ? "Cambiando…" : "Cambiar PIN"}
       </button>
     </form>
   );

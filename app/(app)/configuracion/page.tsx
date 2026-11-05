@@ -1,11 +1,10 @@
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { exigirSesion } from "@/lib/auth";
+import { exigirPermiso } from "@/lib/auth";
 import {
   NegocioForm,
   NotificacionesForm,
   ImapForm,
-  PinForm,
   MarcasSection,
   RepartidoresSection,
 } from "@/components/config-forms";
@@ -22,7 +21,7 @@ export default function ConfiguracionPage() {
 }
 
 async function ConfiguracionPageContent() {
-  await exigirSesion();
+  await exigirPermiso("configuracion");
 
   const [filas, marcas, reps] = await Promise.all([
     prisma.config.findMany(),
@@ -63,8 +62,16 @@ async function ConfiguracionPageContent() {
       </section>
 
       <section className="card">
-        <h2 className="card-title">🔒 Acceso (PIN)</h2>
-        <PinForm />
+        <h2 className="card-title">🔒 Acceso</h2>
+        <p className="text-sm text-slate-600">
+          Las contraseñas se gestionan por usuario. Cada quien cambia la suya en el primer
+          inicio; los administradores pueden restablecerlas desde Usuarios.
+        </p>
+        <div className="mt-3 border-t border-slate-100 pt-3">
+          <a href="/usuarios" className="text-sm font-bold text-brand-600">
+            👤 Gestionar usuarios y roles →
+          </a>
+        </div>
       </section>
 
       <section className="card">

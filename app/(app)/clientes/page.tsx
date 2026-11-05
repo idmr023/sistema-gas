@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { exigirSesion } from "@/lib/auth";
+import { exigirPermiso } from "@/lib/auth";
 import { num, sol } from "@/lib/money";
 import { telefonoBonito } from "@/lib/phone";
 import { eliminarCliente } from "@/lib/actions/clientes";
@@ -27,7 +27,7 @@ async function ClientesPageContent({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await exigirSesion();
+  await exigirPermiso("clientes");
   const sp = await searchParams;
   const uno = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
   const q = uno(sp.q);

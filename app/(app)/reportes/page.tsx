@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { exigirSesion } from "@/lib/auth";
+import { exigirPermiso } from "@/lib/auth";
 import { isoAFecha, hoyISO, diasAtrasISO, fechaLarga } from "@/lib/dates";
 import { num, sol, aDecimal, pct } from "@/lib/money";
 
@@ -23,7 +23,7 @@ async function ReportesPageContent({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await exigirSesion();
+  await exigirPermiso("reportes");
   const sp = await searchParams;
   const uno = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 

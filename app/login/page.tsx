@@ -34,7 +34,7 @@ async function LoginContent() {
         <div className="card p-6">
           <LoginForm />
           <p className="mt-4 text-center text-xs text-slate-400">
-            PIN inicial: 1234 — cámbialo en Configuración
+            ¿Problemas para entrar? Contacta al administrador.
           </p>
         </div>
       </div>

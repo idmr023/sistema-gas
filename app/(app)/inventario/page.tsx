@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { exigirSesion } from "@/lib/auth";
+import { exigirPermiso } from "@/lib/auth";
 import { hoyISO, moverDias, isoAFecha, fechaLegible, fechaLarga } from "@/lib/dates";
 import InventarioForm from "@/components/inventario-form";
 
@@ -24,7 +24,7 @@ async function InventarioPageContent({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await exigirSesion();
+  await exigirPermiso("inventario");
   const sp = await searchParams;
   const fecha = (Array.isArray(sp.fecha) ? sp.fecha[0] : sp.fecha) || hoyISO();
   const valida = /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : hoyISO();

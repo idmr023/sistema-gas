@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { exigirSesion } from "@/lib/auth";
+import { exigirPermisoApi } from "@/lib/auth";
 import { normPhone } from "@/lib/phone";
 
 export type ResultadoCliente = { ok: boolean; error?: string; id?: number };
@@ -20,7 +20,7 @@ export async function guardarCliente(
   _prev: ResultadoCliente,
   formData: FormData,
 ): Promise<ResultadoCliente> {
-  await exigirSesion();
+  await exigirPermisoApi("clientes");
 
   const idNum = Number(formData.get("id")) || null;
   const parsed = esquema.safeParse({
@@ -55,7 +55,7 @@ export async function guardarCliente(
 }
 
 export async function eliminarCliente(id: number): Promise<ResultadoCliente> {
-  await exigirSesion();
+  await exigirPermisoApi("clientes");
   try {
     await prisma.cliente.delete({ where: { id } });
   } catch {

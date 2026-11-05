@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import type { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { exigirSesion } from "@/lib/auth";
+import { exigirPermiso } from "@/lib/auth";
 import { isoAFecha, hoyISO, diasAtrasISO, fechaLarga } from "@/lib/dates";
 import { num, sol } from "@/lib/money";
 import { eliminarPago } from "@/lib/actions/ventas";
@@ -34,7 +34,7 @@ async function PagosPageContent({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await exigirSesion();
+  await exigirPermiso("pagos");
   const sp = await searchParams;
   const uno = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 

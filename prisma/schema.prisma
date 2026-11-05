@@ -36,17 +36,23 @@ enum EstadoPago {
   CONFIRMADO
 }
 
-enum Rol {
-  ADMIN
-  OPERADOR
-  REPARTIDOR
-}
-
 enum TipoNotificacion {
   INFO
   VENTA
   YAPE
   ALERTA
+}
+
+enum EstadoCaja {
+  ABIERTA
+  CERRADA
+}
+
+enum TipoGasto {
+  ALMUERZO
+  TRANSPORTE
+  MANTENIMIENTO
+  OTRO
 }
 
 // ────────────────────────────── Datos base ──────────────────────────────
@@ -87,15 +93,39 @@ model Cliente {
   @@map("clientes")
 }
 
-model Usuario {
-  id        Int      @id @default(autoincrement())
-  nombre    String   @unique
-  pinHash   String   @map("pin_hash")
-  rol       Rol      @default(ADMIN)
-  telefono  String?
-  activo    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at")
+// ────────────────────────────── Roles y usuarios ──────────────────────────────
 
+model Rol {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique // ADMIN, DESARROLLADOR, COLABORADOR, CLIENTE (sembrados)
+  requiere2fa Boolean   @default(false) @map("requiere_2fa")
+  puedeLogin  Boolean   @default(true) @map("puede_login") // false en CLIENTE (etiqueta sin login)
+  permisos    Json      @default("[]") // array de claves de módulo
+  esSistema   Boolean   @default(false) @map("es_sistema") // roles sembrados protegidos
+  activo      Boolean   @default(true)
+  usuarios    Usuario[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model Usuario {
+  id                  Int      @id @default(autoincrement())
+  nombre              String   @unique
+  passwordHash        String   @map("password_hash")
+  mustChangePassword  Boolean  @default(true) @map("must_change_password")
+  rolId               Int      @default(1) @map("rol_id")
+  rol                 Rol      @relation(fields: [rolId], references: [id], onDelete: Restrict)
+  telefono            String?
+  twoFactorSecret     String?  @map("two_factor_secret") // cifrado AES-256-GCM
+  twoFactorEnabled    Boolean  @default(false) @map("two_factor_enabled")
+  activo              Boolean  @default(true)
+  cajas               Caja[]
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([rolId])
   @@map("usuarios")
 }
 
@@ -172,6 +202,45 @@ model InventarioDiario {
   @@unique([fecha, marcaId])
   @@index([fecha])
   @@map("inventario_diario")
+}
+
+// ────────────────────────────── Cajas (apertura/cierre) ──────────────────────────────
+
+model Caja {
+  id           Int        @id @default(autoincrement())
+  fecha        DateTime   @db.Date
+  montoApertura Decimal   @default(0) @map("monto_apertura") @db.Decimal(10, 2)
+  montoCierre  Decimal?  @map("monto_cierre") @db.Decimal(10, 2)
+  notas        String?
+  estado       EstadoCaja @default(ABIERTA)
+  usuarioId    Int?       @map("usuario_id")
+  usuario      Usuario?   @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  gastos       Gasto[]
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@unique([fecha])
+  @@index([fecha])
+  @@map("cajas")
+}
+
+// ────────────────────────────── Gastos (almuerzos, etc.) ──────────────────────────────
+
+model Gasto {
+  id           Int       @id @default(autoincrement())
+  fecha        DateTime  @db.Date
+  cajaId       Int       @map("caja_id")
+  caja         Caja      @relation(fields: [cajaId], references: [id], onDelete: Cascade)
+  tipo         TipoGasto @default(ALMUERZO)
+  monto        Decimal   @db.Decimal(10, 2)
+  colaboradores String?  // quiénes
+  descripcion  String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([fecha])
+  @@index([cajaId])
+  @@index([tipo])
+  @@map("gastos")
 }
 
 // ────────────────────────────── Notificaciones ──────────────────────────────

@@ -11,21 +11,32 @@ export default function LoginForm() {
   return (
     <form action={accion} className="flex flex-col gap-4">
       <div>
-        <label htmlFor="pin" className="label">
-          PIN de acceso
+        <label htmlFor="nombre" className="label">
+          Nombre de usuario
         </label>
         <input
-          id="pin"
-          name="pin"
-          type="password"
-          inputMode="numeric"
-          autoComplete="off"
+          id="nombre"
+          name="nombre"
+          type="text"
+          autoComplete="username"
           autoFocus
-          maxLength={8}
-          placeholder="••••"
-          className={`input text-center text-2xl tracking-[0.5em] ${
-            estado.error ? "input-error" : ""
-          }`}
+          maxLength={60}
+          placeholder="Tu nombre"
+          className={`input ${estado.error ? "input-error" : ""}`}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="password" className="label">
+          Contraseña
+        </label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="••••••••"
+          className={`input ${estado.error ? "input-error" : ""}`}
         />
       </div>
 
