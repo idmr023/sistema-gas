@@ -112,21 +112,23 @@ El sistema cruza esta cifra con las ventas registradas para detectar **descuadre
 
 ## 4. Roles y Acceso
 
-### 4.1 Nivel actual: PIN único
-- Acceso con **un solo PIN** (por defecto `1234`, obligatorio cambiarlo en la primera entrada).
-- Sesión guardada en el navegador (30 días).
-- Ideal para un negocio familiar / un solo usuario administrativo.
+### 4.1 Acceso por contraseña + 2FA
+- Login por **nombre + contraseña** (scrypt, mínimo 8 caracteres); se exige cambiar la contraseña en el primer inicio.
+- **ADMIN** y **DESARROLLADOR** activan **2FA TOTP** (Google Authenticator) con QR en el primer inicio.
+- **COLABORADOR** entra solo con contraseña. **CLIENTE** es una etiqueta sin login.
+- Sesión en cookie `httpOnly`; permisos por módulo se leen del rol en cada petición.
 
-### 4.2 Nivel futuro: Usuarios y roles (opcional)
-Se puede ampliar a usuarios individuales con permisos:
+### 4.2 Roles dinámicos (implementado)
+Tabla `roles` editable desde **/roles** (permisos por módulo, checkboxes):
 
-| Rol | Permisos |
-|---|---|
-| **Administrador** | Todo: configuración, precios, usuarios, reportes, borrados. |
-| **Operador** | Registrar ventas, clientes, pagos y capturar inventario. |
-| **Repartidor** | Ver sus ventas asignadas y marcar entregas / devoluciones. |
+| Rol | 2FA | Login | Permisos por defecto |
+|---|---|---|---|
+| **ADMIN** | sí | sí | todos (incl. `clientes` = contactos) |
+| **DESARROLLADOR** | sí | sí | todos excepto `clientes` |
+| **COLABORADOR** | no | sí | ventas, pagos, inventario, gastos |
+| **CLIENTE** | no | no | ninguno (solo etiqueta) |
 
-> *La ampliación a roles queda contemplada en la arquitectura de la base de datos (campo `rol` en usuarios) para activarse cuando se requiera.*
+Los usuarios se crean/resetean desde **/usuarios** (ADMIN/DEV).
 
 ---
 
@@ -138,7 +140,10 @@ Motor: **PostgreSQL en la nube (Neon)** — base `sistema_gas`, sin Docker. Migr
 marcas            →  id, nombre, precio_defecto, activo
 repartidores      →  id, nombre, telefono, activo
 clientes          →  id, nombre, direccion, telefono, notas
-usuarios          →  id, nombre, rol (ADMIN/OPERADOR/REPARTIDOR), pin_hash, activo
+usuarios          →  id, nombre, password_hash, must_change_password,
+                     rol_id → roles(id), two_factor_secret/enabled, activo
+roles             →  id, nombre, requiere_2fa, puede_login, permisos (jsonb), es_sistema
+cajas / gastos    →  apertura/cierre de caja y gastos del día
 ventas            →  id, fecha, cliente_id, direccion, telefono, premium,
                      marca_id, cantidad, valor_unitario, total,
                      a_cuenta, saldo, estado (PENDIENTE/PARCIAL/PAGADO),
@@ -156,7 +161,7 @@ emails_procesados →  id, message_id, asunto, remitente, monto, referencia,
 **Datos sembrados al instalar:**
 - Marcas: Solgas, Lima Gas, Repsol, Zeta Gas, Primax (editables).
 - Repartidores: Adolfo, David, Michael, Jose (editables).
-- Usuario administrador con PIN `1234` (cambiarlo en Configuración).
+- Usuarios: `admin` / `Admin123!` (ADMIN, con 2FA) y `colaborador` / `Colabora123!` (COLABORADOR) — obligatorio cambiar la contraseña en el primer inicio.
 
 **Invariante de saldos:** `a_cuenta` = suma de pagos CONFIRMADO; `saldo = total − a_cuenta`;
 el estado PENDIENTE/PARCIAL/PAGADO se recalcula en cada alta, baja o conciliación de pago.
@@ -187,7 +192,7 @@ Yape **no ofrece API pública** para cuentas personales. El sistema se conecta p
 | Backend | Next.js Server Actions + Route Handlers (SSE y CSV) |
 | Base de datos | PostgreSQL **Neon** (la nube) · Prisma 7 + migraciones |
 | ORM | Prisma 7 (`prisma7.config.ts`, cliente generado en `app/generated/prisma`) |
-| Autenticación | PIN (scrypt) + cookie `httpOnly` firmada con HMAC (30 días) |
+| Autenticación | Contraseña (scrypt) + 2FA TOTP (`otpauth` + QR) · cookie `httpOnly` firmada con HMAC |
 | Notificaciones | SSE en vivo + sonido + Telegram (opcional) |
 | Correo Yape | Worker IMAP (`imapflow` + `mailparser`) vía `instrumentation.ts` |
 | Pruebas | `node scripts/e2e.mjs` (login, venta, saldo, CSV, conciliación Yape) |
@@ -204,7 +209,7 @@ Yape **no ofrece API pública** para cuentas personales. El sistema se conecta p
 ```bash
 npm install
 npm run db:migrate    # aplica el esquema
-npm run db:seed       # marcas, repartidores y PIN admin
+npm run db:seed       # roles, marcas, repartidores y usuarios admin/colaborador
 npm run dev           # abre http://localhost:3000
 ```
 
@@ -229,7 +234,8 @@ service worker con página *offline* e íconos en `public/icons/` (generados por
 
 ### Despliegue
 - **Local (red del negocio):** `npm start` en la PC; los celulares entran por WiFi a `http://IP_DEL_PC:3000`. Sin costo mensual.
-- **Nube:** subir el proyecto a Vercel / Railway con las variables `DATABASE_URL` (usar el host con `-pooler` para entornos serverless) y `AUTH_SECRET`.
+- **Netlify:** el build (`netlify.toml`) genera el cliente, aplica migraciones/seed si hay `DATABASE_URL` y compila. Configurar en el dashboard: `DATABASE_URL` (host con `-pooler`) y `AUTH_SECRET`.
+- **Render (alternativa):** usar `render.yaml` (blueprint) con `DATABASE_URL`, `DATABASE_URL_UNPOOLED` y `AUTH_SECRET`.
 - **Respaldo:** exportación CSV desde Reportes y respaldos automáticos de la base en Neon.
 
 ---
@@ -240,16 +246,18 @@ service worker con página *offline* e íconos en `public/icons/` (generados por
 |---|---|---|
 | 1 | Scaffold Next.js + Tailwind + Prisma + PostgreSQL | ✅ |
 | 2 | Esquema de base de datos, migraciones y datos sembrados | ✅ |
-| 3 | Login PIN + layout + PWA instalable | ✅ |
+| 3 | Login por contraseña + 2FA, layout + PWA instalable | ✅ |
 | 4 | Módulo de ventas, clientes y pagos | ✅ |
 | 5 | Inventario diario y cálculo de venta del día | ✅ |
 | 6 | Dashboard y reportes | ✅ |
 | 7 | Notificaciones en vivo (SSE + sonido + Telegram) | ✅ |
 | 8 | Worker IMAP de Yape y conciliación de pagos | ✅ |
 | 9 | Configuración, exportaciones y despliegue local/nube | ✅ |
+| 10 | Roles dinámicos, contraseña + 2FA TOTP, guards por permiso | ✅ |
 
-Verificación automática: `node scripts/e2e.mjs` cubre login (PIN correcto e incorrecto),
-las 7 páginas protegidas, alta de venta con saldo, cliente, dashboard, CSV y la
+Verificación automática: `node scripts/e2e.mjs` cubre login con contraseña
+(correcta/incorrecta), cambio forzado, 2FA TOTP, permisos por rol (COLABORADOR
+bloqueado, CLIENTE sin login), alta de venta con saldo, cliente, dashboard, CSV y la
 asignación de un pago Yape pendiente con recálculo de saldo.
 
 ---
@@ -257,7 +265,7 @@ asignación de un pago Yape pendiente con recálculo de saldo.
 ## 10. Puntos Pendientes de Confirmación
 
 - [ ] Credenciales de correo IMAP (host, usuario, contraseña de aplicación) en *Configuración → Correo Yape*.
-- [ ] Cambiar el PIN inicial `1234` y completar datos del negocio + precios por marca.
+- [ ] Cambiar las contraseñas iniciales (primer inicio) y completar datos del negocio + precios por marca.
 - [ ] Probar la instalación de la PWA en el celular del negocio.
 - [ ] (Opcional) Token de Telegram para alertas.
 - [ ] (Opcional) Publicar en la nube con dominio propio.

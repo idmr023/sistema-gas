@@ -1,6 +1,6 @@
 # Plan: Neon + esquema de roles dinámicos + auth con contraseña y 2FA
 
-> Fecha: 2026-11-05 · Estado: en ejecución
+> Fecha: 2026-11-05 · Estado: **completado** (verificación Fase 7 en verde, 2026-11-06)
 
 ## Objetivo
 
@@ -141,3 +141,24 @@ Se mantiene `db:deploy` + `db:seed` (Prisma) como vía principal.
 - No se hacen commits salvo petición explícita.
 - El trabajo previo sin commitear (Cajas/Gastos/Usuarios) se integra con los nuevos guards.
 - Dependencias a agregar: `otpauth`, `qrcode`, `tsx`.
+
+---
+
+## Resultado de la Fase 7 (2026-11-06)
+
+| Comando | Resultado |
+|---|---|
+| `npm run typecheck` | ✓ sin errores |
+| `npm run lint` | ✓ sin errores ni warnings |
+| `npm run build` | ✓ build completo (24 páginas) |
+| `npm run db:deploy` | ✓ 3 migraciones aplicadas en Neon (la de roles se reescribió para ser segura con datos existentes: backfill de `password_hash`/`updated_at`, mapeo del enum `rol` → `rol_id`, roles sembrados antes de la FK) |
+| `npm run db:seed` | ✓ 4 roles, usuarios admin/colaborador garantizados (también si el hash previo no era válido) |
+| `node scripts/e2e.mjs` | ✓ **TODO OK** (login admin con cambio forzado + 2FA, colaborador sin 2FA, CLIENTE rechazado, guards de módulo, ventas/pagos/CSV) |
+
+### Ajustes hechos al plan
+
+- **Bug 2FA**: tras verificar el código, `_verificar2fa` llamaba a `avanzar()` que volvía a redirigir a `/login/2fa` → ahora crea la sesión directamente (`app/login/actions.ts`).
+- **Guards con PPR (Next 16)**: al estar envueltos en `Suspense`, un redirect de `exigirPermiso` llega como `<meta http-equiv="refresh" content="1;url=/dashboard">` dentro de un 200 (sin filtrar contenido) en vez de un 3xx. El e2e acepta ambos formatos.
+- **`prisma migrate resolve --rolled-back`** necesario tras reescribir la migración fallida.
+- Añadido **`render.yaml`** (blueprint de Render) con build/start/pre-deploy y env vars sin secretos.
+- `.env.example` actualizado (ya no menciona PIN).

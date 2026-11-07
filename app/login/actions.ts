@@ -193,7 +193,10 @@ export async function _verificar2fa(
     return { error: "Código incorrecto o expirado." };
   }
 
-  return avanzar(usuario);
+  // Código correcto: ya no hay pasos pendientes → sesión completa.
+  await crearSesion(usuario.id, usuario.nombre, usuario.rol.nombre, usuario.rolId);
+  await destruirPendiente();
+  redirect("/dashboard");
 }
 
 /* ── Salir ───────────────────────────────────────────────────── */

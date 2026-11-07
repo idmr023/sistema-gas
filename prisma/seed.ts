@@ -118,31 +118,43 @@ async function main() {
   }
 
   const usuarios = await prisma.usuario.count();
-  if (usuarios === 0) {
-    const admin = await prisma.rol.findUnique({ where: { nombre: "ADMIN" } });
-    const colaborador = await prisma.rol.findUnique({
-      where: { nombre: "COLABORADOR" },
-    });
-    if (!admin || !colaborador) throw new Error("Faltan roles sembrados.");
+  const admin = await prisma.rol.findUnique({ where: { nombre: "ADMIN" } });
+  const colaborador = await prisma.rol.findUnique({
+    where: { nombre: "COLABORADOR" },
+  });
+  if (!admin || !colaborador) throw new Error("Faltan roles sembrados.");
 
-    await prisma.usuario.create({
-      data: {
-        nombre: "admin",
-        passwordHash: hashPassword("Admin123!"),
-        mustChangePassword: true,
-        rolId: admin.id,
-      },
-    });
-    await prisma.usuario.create({
-      data: {
-        nombre: "colaborador",
-        passwordHash: hashPassword("Colabora123!"),
-        mustChangePassword: true,
-        rolId: colaborador.id,
-      },
-    });
+  // Crea los usuarios seed si faltan, o si su hash no es válido (p. ej. el
+  // relleno md5 que deja la migración de roles → se restaura la contraseña).
+  const CREDENCIALES: [string, string, number][] = [
+    ["admin", "Admin123!", admin.id],
+    ["colaborador", "Colabora123!", colaborador.id],
+  ];
+  let creados = 0;
+  for (const [nombre, password, rolId] of CREDENCIALES) {
+    const existe = await prisma.usuario.findUnique({ where: { nombre } });
+    const hashValido = existe?.passwordHash.includes(":");
+    if (!existe) {
+      await prisma.usuario.create({
+        data: {
+          nombre,
+          passwordHash: hashPassword(password),
+          mustChangePassword: true,
+          rolId,
+        },
+      });
+      creados++;
+    } else if (!hashValido) {
+      await prisma.usuario.update({
+        where: { nombre },
+        data: { passwordHash: hashPassword(password), mustChangePassword: true },
+      });
+      creados++;
+    }
+  }
+  if (creados > 0) {
     console.log(
-      "Usuarios creados: admin (Admin123!), colaborador (Colabora123!) — cambiar contraseña en el primer inicio.",
+      `Usuarios seed (${creados}): admin (Admin123!), colaborador (Colabora123!) — cambiar contraseña en el primer inicio.`,
     );
   }
 

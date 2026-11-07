@@ -470,15 +470,29 @@ try {
     ok(r.status === 200 && !html.includes("__next_error__"), `${ruta} → 200 (tiene permiso)`);
   }
   for (const ruta of ["/usuarios", "/roles", "/clientes", "/configuracion"]) {
-    const { r } = await get(ruta);
+    const { r, html } = await get(ruta);
     const loc = location(r);
+    // Next 16 (PPR): el redirect del guard llega embebido en el shell como
+    // <meta http-equiv="refresh" content="1;url=/dashboard"> cuando la
+    // respuesta ya empezó a enviarse; aceptamos 3xx o ese meta refresh.
+    const meta = html.match(
+      /<meta[^>]*http-equiv="refresh"[^>]*url=([^"'&>]*)/i,
+    )?.[1];
+    const redirigido =
+      (r.status >= 300 && r.status < 400 && loc === "/dashboard") ||
+      (r.status === 200 && meta === "/dashboard");
     ok(
-      r.status >= 300 && r.status < 400 && loc === "/dashboard",
-      `${ruta} → redirige a /dashboard (${r.status} ${loc})`,
+      redirigido,
+      `${ruta} → bloqueado (${r.status} ${loc || meta || "sin redirect"})`,
+    );
+    ok(
+      !html.includes("Nuevo usuario") && !html.includes("Nuevo rol"),
+      `${ruta} → sin contenido protegido filtrado`,
     );
   }
 
   console.log("7) CLIENTE: etiqueta sin login");
+  olvidarCookies(); // la sesión del colaborador no debe contaminar esta prueba
   const rolCliente = await db.query(`SELECT id FROM roles WHERE nombre = 'CLIENTE'`);
   const rolIdCliente = rolCliente.rows[0]?.id;
   ok(Boolean(rolIdCliente), "rol CLIENTE existe");
@@ -505,7 +519,10 @@ try {
   const csvSin = await fetch(`${BASE}/api/exportar?tipo=ventas&desde=2026-01-01&hasta=2030-01-01`, {
     redirect: "manual",
   });
-  ok(csvSin.status >= 300 && csvSin.status < 400, `exportar sin sesión → ${csvSin.status}`);
+  ok(
+    csvSin.status === 401 || (csvSin.status >= 300 && csvSin.status < 400),
+    `exportar sin sesión → 401/redirect (${csvSin.status})`,
+  );
 } catch (e) {
   console.error("  ✗ ERROR INESPERADO:", e?.message ?? e);
   process.exitCode = 1;

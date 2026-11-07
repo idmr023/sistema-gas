@@ -1,0 +1,28 @@
+# Blueprint de Render — sistema-gas
+# El usuario crea el servicio desde Render → New → Blueprint (o New Web Service
+# siguiendo estos valores). Los secretos se cargan desde el dashboard.
+services:
+  - type: web
+    name: sistema-gas
+    runtime: node
+    repo: https://github.com/idmr023/sistema-gas
+    branch: main
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    preDeployCommand: npx prisma migrate deploy && npx prisma db seed
+    healthCheckPath: /login
+    envVars:
+      # Cadena POOLED de Neon (host con '-pooler') para la app
+      - key: DATABASE_URL
+        sync: false
+      # Cadena DIRECTA de Neon para migraciones (prisma7.config.ts la prefiere)
+      - key: DATABASE_URL_UNPOOLED
+        sync: false
+      # node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      - key: AUTH_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_APP_NAME
+        value: Sistema de Gas
+      - key: NODE_VERSION
+        value: "22"

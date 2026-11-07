@@ -1,5 +1,7 @@
 [build]
-  command = "npm install && npx prisma generate && npx next build"
+  # predeploy.mjs aplica migraciones + seed solo si existe DATABASE_URL
+  # (si no, se omite sin romper el build)
+  command = "npm install && npx prisma generate && node scripts/predeploy.mjs && npx next build"
 
 [build.environment]
   NODE_VERSION = "22"
