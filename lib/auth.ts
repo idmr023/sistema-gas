@@ -14,6 +14,7 @@ export const getRol = cache(async (rolId: number) =>
 
 /** Permisos del rol vigente (memoizado por render). */
 export const getPermisos = cache(async (rolId: number): Promise<string[]> => {
+  if (!Number.isInteger(rolId) || rolId <= 0) return [];
   const rol = await getRol(rolId);
   if (!rol || !rol.activo) return [];
   return Array.isArray(rol.permisos) ? (rol.permisos as string[]) : [];

@@ -74,7 +74,11 @@ export async function crearSesion(
 
 export async function leerSesion(): Promise<Sesion | null> {
   const store = await cookies();
-  return verificar<Sesion>(store.get(COOKIE)?.value);
+  const s = await verificar<Sesion>(store.get(COOKIE)?.value);
+  // Cookies de versiones antiguas (sin rolId) o manipuladas → sesión inválida,
+  // que el guard la trate como "sin sesión" y mande a /login.
+  if (!s || typeof s.id !== "number" || typeof s.rolId !== "number") return null;
+  return s;
 }
 
 export async function destruirSesion(): Promise<void> {
@@ -98,7 +102,9 @@ export async function crearPendiente(uid: number): Promise<void> {
 
 export async function leerPendiente(): Promise<Pendiente | null> {
   const store = await cookies();
-  return verificar<Pendiente>(store.get(COOKIE_PEND)?.value);
+  const p = await verificar<Pendiente>(store.get(COOKIE_PEND)?.value);
+  if (!p || typeof p.uid !== "number") return null;
+  return p;
 }
 
 export async function destruirPendiente(): Promise<void> {
