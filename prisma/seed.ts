@@ -126,30 +126,36 @@ async function main() {
 
   // Crea los usuarios seed si faltan, o si su hash no es válido (p. ej. el
   // relleno md5 que deja la migración de roles → se restaura la contraseña).
-  const CREDENCIALES: [string, string, number][] = [
-    ["admin", "Admin123!", admin.id],
-    ["colaborador", "Colabora123!", colaborador.id],
+  const CREDENCIALES: [string, string, string, number][] = [
+    ["admin", "Admin123!", "admin@sistema.local", admin.id],
+    ["colaborador", "Colabora123!", "colaborador@sistema.local", colaborador.id],
   ];
   let creados = 0;
-  for (const [nombre, password, rolId] of CREDENCIALES) {
+  for (const [nombre, password, email, rolId] of CREDENCIALES) {
     const existe = await prisma.usuario.findUnique({ where: { nombre } });
     const hashValido = existe?.passwordHash.includes(":");
     if (!existe) {
       await prisma.usuario.create({
         data: {
           nombre,
+          email,
           passwordHash: hashPassword(password),
           mustChangePassword: true,
           rolId,
         },
       });
       creados++;
-    } else if (!hashValido) {
-      await prisma.usuario.update({
-        where: { nombre },
-        data: { passwordHash: hashPassword(password), mustChangePassword: true },
-      });
-      creados++;
+    } else {
+      if (!hashValido) {
+        await prisma.usuario.update({
+          where: { nombre },
+          data: { passwordHash: hashPassword(password), mustChangePassword: true },
+        });
+        creados++;
+      }
+      if (!existe.email) {
+        await prisma.usuario.update({ where: { nombre }, data: { email } });
+      }
     }
   }
   if (creados > 0) {

@@ -5,7 +5,7 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "EstadoVenta" AS ENUM ('PENDIENTE', 'PARCIAL', 'PAGADO');
 
 -- CreateEnum
-CREATE TYPE "MetodoPago" AS ENUM ('EFECTIVO', 'YAPE', 'TRANSFERENCIA', 'OTRO');
+CREATE TYPE "MetodoPago" AS ENUM ('EFECTIVO', 'YAPE', 'TRANSFERENCIA', 'OTRO', 'TARJETA');
 
 -- CreateEnum
 CREATE TYPE "OrigenPago" AS ENUM ('MANUAL', 'IMAP', 'WEBHOOK');
@@ -76,6 +76,7 @@ CREATE TABLE "roles" (
 CREATE TABLE "usuarios" (
     "id" SERIAL NOT NULL,
     "nombre" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
     "must_change_password" BOOLEAN NOT NULL DEFAULT true,
     "rol_id" INTEGER NOT NULL DEFAULT 1,
@@ -225,6 +226,9 @@ CREATE UNIQUE INDEX "roles_nombre_key" ON "roles"("nombre");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "usuarios_nombre_key" ON "usuarios"("nombre");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "usuarios_email_key" ON "usuarios"("email");
 
 -- CreateIndex
 CREATE INDEX "usuarios_rol_id_idx" ON "usuarios"("rol_id");

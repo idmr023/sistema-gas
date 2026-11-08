@@ -16,10 +16,10 @@ VALUES
 ON CONFLICT ("nombre") DO NOTHING;
 
 -- 2) Usuarios iniciales (hash scrypt "salt:hash")
-INSERT INTO "usuarios" ("nombre", "password_hash", "must_change_password", "rol_id", "two_factor_enabled", "activo", "updated_at")
+INSERT INTO "usuarios" ("nombre", "email", "password_hash", "must_change_password", "rol_id", "two_factor_enabled", "activo", "updated_at")
 VALUES
-  ('admin',       'a98390c2e44602fddf5133ccd16efafc:e959ddc4f97d60ae3a30ef4f413f63b437918a44c7058e8cc90f1741ad49749e', true, (SELECT "id" FROM "roles" WHERE "nombre" = 'ADMIN'),       false, true, NOW()),
-  ('colaborador', 'eb56355ebdf4d79672ae173fed703cb3:8b3aad7ae02cb7657b1370ec640330d38ca5a6b690242912c2ec2ed977d23665', true, (SELECT "id" FROM "roles" WHERE "nombre" = 'COLABORADOR'), false, true, NOW())
+  ('admin',       'admin@sistema.local',       'a98390c2e44602fddf5133ccd16efafc:e959ddc4f97d60ae3a30ef4f413f63b437918a44c7058e8cc90f1741ad49749e', true, (SELECT "id" FROM "roles" WHERE "nombre" = 'ADMIN'),       false, true, NOW()),
+  ('colaborador', 'colaborador@sistema.local', 'eb56355ebdf4d79672ae173fed703cb3:8b3aad7ae02cb7657b1370ec640330d38ca5a6b690242912c2ec2ed977d23665', true, (SELECT "id" FROM "roles" WHERE "nombre" = 'COLABORADOR'), false, true, NOW())
 ON CONFLICT ("nombre") DO NOTHING;
 
 -- 3) Marcas (precio por defecto en S/.)

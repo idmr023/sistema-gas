@@ -499,8 +499,8 @@ try {
   if (rolIdCliente) {
     await db.query(`DELETE FROM usuarios WHERE nombre = 'e2e_cliente'`);
     await db.query(
-      `INSERT INTO usuarios (nombre, password_hash, must_change_password, rol_id, activo, created_at, updated_at)
-       VALUES ('e2e_cliente', $1, false, $2, true, now(), now())`,
+      `INSERT INTO usuarios (nombre, email, password_hash, must_change_password, rol_id, activo, created_at, updated_at)
+       VALUES ('e2e_cliente', 'e2e_cliente@sistema.local', $1, false, $2, true, now(), now())`,
       [hashPassword(PASS_CLIENTE), rolIdCliente],
     );
     const res = await intentarLogin("e2e_cliente", PASS_CLIENTE);

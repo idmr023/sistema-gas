@@ -229,6 +229,7 @@ export default function VentaForm({
               <option value="YAPE">Yape</option>
               <option value="TRANSFERENCIA">Transferencia</option>
               <option value="OTRO">Otro</option>
+              <option value="TARJETA">Tarjeta</option>
             </select>
           </div>
         </div>

@@ -11,6 +11,7 @@ import BotonEliminar from "@/components/boton-eliminar";
 type Usuario = {
   id: number;
   nombre: string;
+  email: string;
   rolId: number;
   rolNombre: string;
   telefono: string | null;
@@ -70,10 +71,11 @@ export default function UsuariosSection({
         </div>
 
         <div className="card overflow-x-auto p-0">
-          <table className="table-base min-w-[560px]">
+          <table className="table-base min-w-[700px]">
             <thead>
               <tr>
                 <th>Nombre</th>
+                <th>Correo</th>
                 <th>Rol</th>
                 <th>2FA</th>
                 <th>Teléfono</th>
@@ -85,6 +87,7 @@ export default function UsuariosSection({
               {usuarios.map((u) => (
                 <tr key={u.id} className={u.activo ? "" : "opacity-50"}>
                   <td className="font-bold">{u.nombre}</td>
+                  <td className="text-slate-500">{u.email}</td>
                   <td>
                     <span className="badge badge-slate">{u.rolNombre}</span>
                   </td>
@@ -146,6 +149,20 @@ export default function UsuariosSection({
                   maxLength={60}
                   defaultValue={usuarioEditando?.nombre ?? ""}
                   placeholder="Nombre del usuario"
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="u-email">Correo</label>
+                <input
+                  id="u-email"
+                  name="email"
+                  type="email"
+                  className="input"
+                  required
+                  maxLength={120}
+                  defaultValue={usuarioEditando?.email ?? ""}
+                  placeholder="usuario@ejemplo.com"
+                  autoComplete="email"
                 />
               </div>
               <div>

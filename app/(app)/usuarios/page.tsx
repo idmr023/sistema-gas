@@ -23,6 +23,7 @@ async function UsuariosPageContent() {
       select: {
         id: true,
         nombre: true,
+        email: true,
         rolId: true,
         rol: { select: { nombre: true } },
         telefono: true,
@@ -42,7 +43,7 @@ async function UsuariosPageContent() {
       <div>
         <h1 className="text-xl font-extrabold">Usuarios</h1>
         <p className="text-sm text-slate-500">
-          Crea usuarios, asígnales un rol y restablece contraseñas.
+          Crea usuarios con su correo, asígnales un rol y restablece contraseñas.
         </p>
       </div>
 
@@ -50,6 +51,7 @@ async function UsuariosPageContent() {
         usuarios={usuarios.map((u) => ({
           id: u.id,
           nombre: u.nombre,
+          email: u.email,
           rolId: u.rolId,
           rolNombre: u.rol.nombre,
           telefono: u.telefono,

@@ -27,13 +27,13 @@ const esquemaVenta = z.object({
   regresado: z.boolean(),
   repartidorId: z.number().int().positive().nullable(),
   notas: z.string().trim().max(500),
-  metodoPago: z.enum(["EFECTIVO", "YAPE", "TRANSFERENCIA", "OTRO"]),
+  metodoPago: z.enum(["EFECTIVO", "YAPE", "TRANSFERENCIA", "OTRO", "TARJETA"]),
 });
 
 const esquemaPago = z.object({
   ventaId: z.number().int().positive(),
   monto: z.number().positive("El monto debe ser mayor a 0"),
-  metodo: z.enum(["EFECTIVO", "YAPE", "TRANSFERENCIA", "OTRO"]),
+  metodo: z.enum(["EFECTIVO", "YAPE", "TRANSFERENCIA", "OTRO", "TARJETA"]),
   referencia: z.string().trim().max(80),
   nota: z.string().trim().max(300),
 });
@@ -66,7 +66,8 @@ function leerVenta(fd: FormData) {
       | "EFECTIVO"
       | "YAPE"
       | "TRANSFERENCIA"
-      | "OTRO",
+      | "OTRO"
+      | "TARJETA",
   };
   return esquemaVenta.parse(raw);
 }
@@ -175,14 +176,19 @@ export async function crearVenta(
   });
 
   if (datos.aCuenta > 0) {
+    const recargo = datos.metodoPago === "TARJETA" ? 2 : 0;
+    const montoFinal = r2(datos.aCuenta + recargo);
+    const partesNota = ["Pago inicial"];
+    if (recargo) partesNota.push(`Recargo POS S/ ${recargo.toFixed(2)}`);
+
     await prisma.pago.create({
       data: {
         fecha: isoAFecha(datos.fecha),
         ventaId: venta.id,
-        monto: datos.aCuenta,
+        monto: montoFinal,
         metodo: datos.metodoPago,
         origen: "MANUAL",
-        nota: "Pago inicial",
+        nota: partesNota.join(" · "),
       },
     });
   }
@@ -222,9 +228,17 @@ export async function registrarPago(
 
   const parsed = esquemaPago.safeParse({
     ...raw,
-    metodo: raw.metodo as "EFECTIVO" | "YAPE" | "TRANSFERENCIA" | "OTRO",
+    metodo: raw.metodo as
+      | "EFECTIVO"
+      | "YAPE"
+      | "TRANSFERENCIA"
+      | "OTRO"
+      | "TARJETA",
   });
   if (!parsed.success) return { ok: false, error: "Monto o método inválido." };
+
+  const recargo = parsed.data.metodo === "TARJETA" ? 2 : 0;
+  const montoFinal = r2(parsed.data.monto + recargo);
 
   const venta = await prisma.venta.findUnique({
     where: { id: parsed.data.ventaId },
@@ -233,18 +247,23 @@ export async function registrarPago(
   if (!venta) return { ok: false, error: "Venta no encontrada." };
 
   const saldo = num(venta.saldo);
-  if (parsed.data.monto > saldo + 0.001) {
+  if (montoFinal > saldo + 0.001) {
     return { ok: false, error: `El pago supera el saldo (S/ ${saldo.toFixed(2)}).` };
   }
+
+  const partesNota = [];
+  if (parsed.data.nota) partesNota.push(parsed.data.nota);
+  if (recargo) partesNota.push(`Recargo POS S/ ${recargo.toFixed(2)}`);
+  const notaFinal = partesNota.join(" · ") || null;
 
   await prisma.pago.create({
     data: {
       fecha: isoAFecha(hoyISO()),
       ventaId: venta.id,
-      monto: parsed.data.monto,
+      monto: montoFinal,
       metodo: parsed.data.metodo,
       referencia: parsed.data.referencia || null,
-      nota: parsed.data.nota || null,
+      nota: notaFinal,
       origen: "MANUAL",
       estado: "CONFIRMADO",
     },

@@ -11,6 +11,7 @@ export type ResultadoUsuario = { ok: boolean; error?: string };
 const esquema = z.object({
   id: z.number().int().positive().nullable(),
   nombre: z.string().trim().min(1, "Falta el nombre").max(60),
+  email: z.email("Correo inválido").max(120, "Máximo 120 caracteres"),
   rolId: z.number().int().positive("Elige un rol"),
   telefono: z.string().trim().max(30),
   activo: z.boolean(),
@@ -26,6 +27,7 @@ export async function guardarUsuario(
   const parsed = esquema.safeParse({
     id: Number(formData.get("id")) || null,
     nombre: String(formData.get("nombre") ?? ""),
+    email: String(formData.get("email") ?? "").trim().toLowerCase(),
     rolId: Number(formData.get("rolId")) || 0,
     telefono: String(formData.get("telefono") ?? ""),
     activo: formData.get("activo") !== null,
@@ -64,7 +66,11 @@ export async function guardarUsuario(
         },
       });
     }
-  } catch {
+  } catch (e) {
+    const texto = String((e as { meta?: unknown })?.meta ?? "") + " " + String((e as { message?: string })?.message ?? "");
+    if (/email/i.test(texto)) {
+      return { ok: false, error: "Ya existe un usuario con ese correo." };
+    }
     return { ok: false, error: "Ya existe un usuario con ese nombre." };
   }
 
@@ -97,6 +103,7 @@ export async function listarUsuarios() {
     select: {
       id: true,
       nombre: true,
+      email: true,
       rolId: true,
       rol: { select: { nombre: true } },
       telefono: true,

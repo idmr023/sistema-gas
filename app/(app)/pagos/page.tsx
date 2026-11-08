@@ -45,8 +45,8 @@ async function PagosPageContent({
   const where: Prisma.PagoWhereInput = {
     fecha: { gte: isoAFecha(desde), lte: isoAFecha(hasta) },
   };
-  if (metodo && ["EFECTIVO", "YAPE", "TRANSFERENCIA", "OTRO"].includes(metodo)) {
-    where.metodo = metodo as "EFECTIVO" | "YAPE" | "TRANSFERENCIA" | "OTRO";
+  if (metodo && ["EFECTIVO", "YAPE", "TRANSFERENCIA", "OTRO", "TARJETA"].includes(metodo)) {
+    where.metodo = metodo as "EFECTIVO" | "YAPE" | "TRANSFERENCIA" | "OTRO" | "TARJETA";
   }
 
   const [pagos, agg] = await Promise.all([
@@ -105,6 +105,7 @@ async function PagosPageContent({
             <option value="YAPE">Yape</option>
             <option value="TRANSFERENCIA">Transferencia</option>
             <option value="OTRO">Otro</option>
+            <option value="TARJETA">Tarjeta</option>
           </select>
         </div>
         <div className="flex items-end">
@@ -157,13 +158,15 @@ async function PagosPageContent({
                 </td>
                 <td>
                   <span
-                    className={
-                      p.metodo === "YAPE"
-                        ? "badge badge-amber"
-                        : p.metodo === "EFECTIVO"
-                          ? "badge badge-green"
-                          : "badge badge-slate"
-                    }
+className={
+                       p.metodo === "YAPE"
+                         ? "badge badge-amber"
+                         : p.metodo === "EFECTIVO"
+                           ? "badge badge-green"
+                           : p.metodo === "TARJETA"
+                             ? "badge badge-blue"
+                             : "badge badge-slate"
+                     }
                   >
                     {p.metodo}
                   </span>
