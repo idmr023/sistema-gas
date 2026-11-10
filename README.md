@@ -213,6 +213,10 @@ npm run db:seed       # roles, marcas, repartidores y usuarios admin/colaborador
 npm run dev           # abre http://localhost:3000
 ```
 
+`dev`, `all` y `build` regeneran el cliente de Prisma antes de arrancar.
+Después de cambiar el esquema mientras el servidor está activo, deténlo y
+reinícialo para que deje de usar la instancia anterior del cliente.
+
 ### Compilar para uso real
 ```bash
 npm run build
@@ -224,6 +228,7 @@ npm start             # servidor optimizado en el puerto 3000
 |---|---|
 | `npm run typecheck` / `npm run lint` | Verificar tipos y estilo |
 | `npm run db:migrate` / `npm run db:seed` | Migraciones y datos iniciales |
+| `npm run db:generate` | Regenerar el cliente de Prisma después de cambiar el esquema |
 | `npm run db:studio` | Explorar la base de datos en el navegador |
 | `npm run icons` | Regenerar los íconos de la PWA |
 | `node scripts/e2e.mjs` | Prueba E2E (requiere `npm start` corriendo) |

@@ -122,13 +122,18 @@ async function main() {
   const colaborador = await prisma.rol.findUnique({
     where: { nombre: "COLABORADOR" },
   });
-  if (!admin || !colaborador) throw new Error("Faltan roles sembrados.");
+  const desarrollador = await prisma.rol.findUnique({
+    where: { nombre: "DESARROLLADOR" },
+  });
+  if (!admin || !colaborador || !desarrollador)
+    throw new Error("Faltan roles sembrados.");
 
   // Crea los usuarios seed si faltan, o si su hash no es válido (p. ej. el
   // relleno md5 que deja la migración de roles → se restaura la contraseña).
   const CREDENCIALES: [string, string, string, number][] = [
     ["admin", "Admin123!", "admin@sistema.local", admin.id],
     ["colaborador", "Colabora123!", "colaborador@sistema.local", colaborador.id],
+    ["desarrollador", "Desarrollo123!", "desarrollador@sistema.local", desarrollador.id],
   ];
   let creados = 0;
   for (const [nombre, password, email, rolId] of CREDENCIALES) {
@@ -160,7 +165,7 @@ async function main() {
   }
   if (creados > 0) {
     console.log(
-      `Usuarios seed (${creados}): admin (Admin123!), colaborador (Colabora123!) — cambiar contraseña en el primer inicio.`,
+      `Usuarios seed (${creados}): admin (Admin123!), colaborador (Colabora123!), desarrollador (Desarrollo123!) — cambiar contraseña en el primer inicio.`,
     );
   }
 

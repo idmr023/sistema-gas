@@ -4,8 +4,11 @@
   "private": true,
   "description": "Sistema web integral (ventas, inventario diario y pagos Yape) para negocio de gas",
   "scripts": {
+    "predev": "npm run db:generate",
     "dev": "next dev",
+    "preall": "npm run db:generate",
     "all": "next dev",
+    "prebuild": "npm run db:generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
