@@ -113,10 +113,14 @@ El sistema cruza esta cifra con las ventas registradas para detectar **descuadre
 ## 4. Roles y Acceso
 
 ### 4.1 Acceso por contraseña + 2FA
-- Login por **nombre + contraseña** (scrypt, mínimo 8 caracteres); se exige cambiar la contraseña en el primer inicio.
+- Login por **nombre de usuario (o correo) + contraseña** (scrypt, mínimo 8 caracteres); se exige cambiar la contraseña en el primer inicio.
 - **ADMIN** y **DESARROLLADOR** activan **2FA TOTP** (Google Authenticator) con QR en el primer inicio.
 - **COLABORADOR** entra solo con contraseña. **CLIENTE** es una etiqueta sin login.
 - Sesión en cookie `httpOnly`; permisos por módulo se leen del rol en cada petición.
+- El código TOTP acepta **±60 s** de desfase de reloj (celulares con la hora desajustada).
+- Si el código no coincide: en `/login/2fa` está el enlace **“Generar una clave nueva”**
+  (pide la contraseña y muestra un QR nuevo). Un ADMIN también puede restablecer el
+  2FA de un usuario desde **/usuarios** (botón 🔑).
 
 ### 4.2 Roles dinámicos (implementado)
 Tabla `roles` editable desde **/roles** (permisos por módulo, checkboxes):
@@ -195,7 +199,7 @@ Yape **no ofrece API pública** para cuentas personales. El sistema se conecta p
 | Autenticación | Contraseña (scrypt) + 2FA TOTP (`otpauth` + QR) · cookie `httpOnly` firmada con HMAC |
 | Notificaciones | SSE en vivo + sonido + Telegram (opcional) |
 | Correo Yape | Worker IMAP (`imapflow` + `mailparser`) vía `instrumentation.ts` |
-| Pruebas | `node scripts/e2e.mjs` (login, venta, saldo, CSV, conciliación Yape) |
+| Pruebas | `node scripts/e2e.mjs` (login, venta, saldo, CSV, conciliación Yape) · `node scripts/e2e-auth.mjs` (flujo de login, 2FA, acceso por correo) |
 
 ---
 

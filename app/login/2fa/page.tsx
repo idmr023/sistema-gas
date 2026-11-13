@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { leerPendiente } from "@/lib/session";
 import TotpForm from "./totp-form";
@@ -22,8 +23,24 @@ export default async function Verificar2faPage() {
           </p>
         </div>
 
-        <div className="card p-6">
+        <div className="card flex flex-col gap-4 p-6">
           <TotpForm />
+
+          <div className="border-t border-slate-100 pt-3 text-center">
+            <p className="mb-2 text-xs text-slate-500">
+              ¿El código no coincide? Revisa que tu celular tenga la{" "}
+              <strong>hora automática</strong> activada.
+            </p>
+            <Link
+              href="/login/2fa/configurar"
+              className="text-sm font-bold text-brand-600 underline"
+            >
+              Generar una clave nueva
+            </Link>
+            <p className="mt-2 text-[11px] text-slate-400">
+              Hora del servidor: {new Date().toUTCString()}
+            </p>
+          </div>
         </div>
       </div>
     </main>

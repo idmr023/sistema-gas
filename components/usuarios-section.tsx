@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import {
   eliminarUsuario,
   guardarUsuario,
+  restablecer2fa,
   type ResultadoUsuario,
 } from "@/lib/actions/usuarios";
 import BotonEliminar from "@/components/boton-eliminar";
@@ -101,7 +102,15 @@ export default function UsuariosSection({
                     )}
                   </td>
                   <td className="text-center">
-                    <div className="flex justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1">
+                      {u.twoFactorEnabled && (
+                        <BotonEliminar
+                          accion={() => restablecer2fa(u.id)}
+                          mensaje={`¿Restablecer el 2FA de ${u.nombre}? Tendrá que configurarlo de nuevo al entrar.`}
+                          etiqueta="🔑"
+                          titulo="Restablecer 2FA"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => {

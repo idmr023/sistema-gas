@@ -64,10 +64,21 @@ export function urlQr(nombre: string, secreto: string): string {
   return totp.toString();
 }
 
-/** Verifica código TOTP con ±1 ventana de desfase (30s). */
-export function verificarTotp(secreto: string, codigo: string): boolean {
-  const limpio = String(codigo).replace(/\s+/g, "");
-  if (!/^\d{6}$/.test(limpio)) return false;
+/** Ventana de tolerancia del reloj (en pasos de 30 s). 2 = ±60 s. */
+export const VENTANA_TOTP = 2;
+
+/** Quita espacios y guiones que algunas apps de autenticación agregan. */
+export function normalizarCodigo(codigo: string): string {
+  return String(codigo ?? "").replace(/[\s-]/g, "");
+}
+
+/**
+ * Verifica un código TOTP.
+ * Devuelve el desfase (delta) en pasos de 30 s, o `null` si no coincide.
+ */
+export function validarTotp(secreto: string, codigo: string): number | null {
+  const limpio = normalizarCodigo(codigo);
+  if (!/^\d{6}$/.test(limpio)) return null;
   const totp = new TOTP({
     issuer: "Sistema de Gas",
     label: "verify",
@@ -77,8 +88,13 @@ export function verificarTotp(secreto: string, codigo: string): boolean {
     secret: secreto,
   });
   try {
-    return totp.validate({ token: limpio, window: 1 }) !== null;
+    return totp.validate({ token: limpio, window: VENTANA_TOTP });
   } catch {
-    return false;
+    return null;
   }
+}
+
+/** Verifica código TOTP con tolerancia de reloj (±VENTANA_TOTP pasos). */
+export function verificarTotp(secreto: string, codigo: string): boolean {
+  return validarTotp(secreto, codigo) !== null;
 }

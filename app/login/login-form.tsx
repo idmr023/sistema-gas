@@ -12,7 +12,7 @@ export default function LoginForm() {
     <form action={accion} className="flex flex-col gap-4">
       <div>
         <label htmlFor="nombre" className="label">
-          Nombre de usuario
+          Nombre de usuario o correo
         </label>
         <input
           id="nombre"
@@ -20,8 +20,8 @@ export default function LoginForm() {
           type="text"
           autoComplete="username"
           autoFocus
-          maxLength={60}
-          placeholder="Tu nombre"
+          maxLength={120}
+          placeholder="admin o tu@correo.com"
           className={`input ${estado.error ? "input-error" : ""}`}
         />
       </div>

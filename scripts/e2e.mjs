@@ -118,6 +118,13 @@ function location(r) {
 }
 
 /* ── Crypto: TOTP + cifrado de secreto + hash de contraseña ──────── */
+
+/** Fecha local (YYYY-MM-DD) igual que lib/dates.ts → hoyISO(). */
+function hoyLocal() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
 function base32Decode(s) {
   const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   let bits = 0;
@@ -342,7 +349,7 @@ try {
 
   const venta = {
     ...fdVenta,
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: hoyLocal(),
     clienteNombre: CLIENTE_VENTA,
     direccion: "Av. E2E 123",
     telefono: "999000111",
@@ -411,7 +418,7 @@ try {
   const ventaId = v.rows[0].id;
   const saldoAntes = Number(v.rows[0].saldo);
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyLocal();
   const desde = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
   const { html: pagosHtml } = await get(`/pagos?desde=${desde}&hasta=${hoy}`);
   const bloques = [...pagosHtml.matchAll(/<form[\s\S]*?<\/form>/g)].map((m) => m[0]);
@@ -543,6 +550,20 @@ try {
     );
     await db.query(`DELETE FROM usuarios WHERE nombre = 'e2e_cliente'`);
     console.log("\nCredenciales seed restauradas (admin/colaborador).");
+
+    // Limpia los datos que creó la prueba (ventas, pagos y clientes de
+    // ejemplo) para no dejar basura en la base del negocio.
+    const ventas = await db.query(
+      `SELECT id FROM ventas WHERE cliente_nombre LIKE 'Prueba E2E%'`,
+    );
+    const ids = ventas.rows.map((v) => v.id);
+    if (ids.length) {
+      await db.query(`DELETE FROM pagos WHERE venta_id = ANY($1::int[])`, [ids]);
+      await db.query(`DELETE FROM ventas WHERE id = ANY($1::int[])`, [ids]);
+    }
+    await db.query(`DELETE FROM pagos WHERE referencia LIKE 'op-e2e-%'`);
+    await db.query(`DELETE FROM clientes WHERE nombre LIKE 'Prueba E2E%'`);
+    console.log(`Datos de prueba eliminados (${ids.length} venta(s)).`);
   } catch (e) {
     console.error("No se pudieron restaurar credenciales:", e?.message ?? e);
     process.exitCode = 1;

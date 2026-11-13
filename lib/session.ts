@@ -1,7 +1,7 @@
 import "server-only";
 import "./env";
 import crypto from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { connection } from "next/server";
 
 const COOKIE = "gas_session";
@@ -56,6 +56,30 @@ async function verificar<T>(token: string | undefined): Promise<T | null> {
   }
 }
 
+/**
+ * ¿La cookie debe marcarse como Secure?
+ * Solo si la petición llega por HTTPS. En la red del negocio (http://IP:3000)
+ * una cookie Secure la descarta el navegador y el login nunca termina.
+ * Se puede forzar con COOKIE_SECURE=1|0.
+ */
+async function cookieSegura(): Promise<boolean> {
+  const flag = process.env.COOKIE_SECURE;
+  if (flag === "1") return true;
+  if (flag === "0") return false;
+  if (process.env.NODE_ENV !== "production") return false;
+  try {
+    const h = await headers();
+    const proto =
+      h.get("x-forwarded-proto") ??
+      h.get("x-forwarded-ssl") ??
+      h.get("front-end-https");
+    if (proto) return proto.split(",")[0].trim().toLowerCase() === "https";
+  } catch {
+    // sin cabeceras disponibles: se asume HTTP
+  }
+  return false;
+}
+
 export async function crearSesion(
   id: number,
   nombre: string,
@@ -66,7 +90,7 @@ export async function crearSesion(
   store.set(COOKIE, firmarToken({ id, nombre, rol, rolId, exp: Date.now() + DURACION }), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: await cookieSegura(),
     path: "/",
     maxAge: DURACION / 1000,
   });
@@ -94,7 +118,7 @@ export async function crearPendiente(uid: number): Promise<void> {
   store.set(COOKIE_PEND, firmarToken({ uid, exp: Date.now() + DURACION_PEND }), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: await cookieSegura(),
     path: "/",
     maxAge: DURACION_PEND / 1000,
   });

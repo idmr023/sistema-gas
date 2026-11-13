@@ -96,6 +96,25 @@ export async function eliminarUsuario(id: number): Promise<ResultadoUsuario> {
   return { ok: true };
 }
 
+/**
+ * Borra la clave 2FA del usuario: podrá configurarla de nuevo al entrar
+ * (útil si perdió el celular, cambió de app o la hora del reloj lo bloqueó).
+ */
+export async function restablecer2fa(id: number): Promise<ResultadoUsuario> {
+  await exigirPermisoApi("usuarios");
+
+  try {
+    await prisma.usuario.update({
+      where: { id },
+      data: { twoFactorSecret: null, twoFactorEnabled: false },
+    });
+  } catch {
+    return { ok: false, error: "No se pudo restablecer el 2FA." };
+  }
+  revalidatePath("/usuarios");
+  return { ok: true };
+}
+
 export async function listarUsuarios() {
   await exigirSesionApi();
   return prisma.usuario.findMany({
